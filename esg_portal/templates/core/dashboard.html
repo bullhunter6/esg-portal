@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}ESG News Portal - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h1>
+        <div>
+            <a href="{{ url_for('auth.profile') }}" class="btn btn-outline-primary">
+                <i class="fas fa-user-cog me-1"></i>Edit Profile
+            </a>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Welcome, {{ current_user.get_full_name() }}!</h5>
+                    <p class="card-text">
+                        This is your personalized dashboard where you can see the latest ESG news and events tailored to your interests.
+                        {% if current_user.preferred_categories %}
+                            <br>Your preferred categories: <strong>{{ current_user.preferred_categories }}</strong>
+                        {% else %}
+                            <br>You haven't set any preferred categories yet. <a href="{{ url_for('auth.profile') }}">Update your profile</a> to personalize your dashboard.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Like Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="dashboard-stat">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon me-3">
+                        <i class="fas fa-newspaper"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ like_counts.article }}</div>
+                        <div class="stat-label">Articles Liked</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-stat">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon me-3">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ like_counts.event }}</div>
+                        <div class="stat-label">Events Liked</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-stat">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon me-3">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value">{{ like_counts.publication }}</div>
+                        <div class="stat-label">Publications Liked</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <!-- Removed Latest Articles Section -->
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Removed Upcoming Events Section -->
+        </div>
+    </div>
+    
+    <!-- Liked Content Section -->
+    <h2 class="mb-3">Your Liked Content</h2>
+    
+    <!-- Liked Articles -->
+    {% if liked_articles %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-heart me-2 text-danger"></i>Articles You've Liked</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for article in liked_articles %}
+                <div class="col-md-6 mb-3">
+                    <div class="d-flex">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                <a href="{{ url_for('core.article_detail', id=article.id) }}">{{ article.title }}</a>
+                            </h6>
+                            <p class="mb-1 text-muted small">
+                                <i class="fas fa-calendar-alt me-1"></i>{{ article.published_date.strftime('%b %d, %Y') if article.published_date else 'No date' }}
+                                {% if article.source %}
+                                <span class="ms-2"><i class="fas fa-globe me-1"></i>{{ article.source }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger ms-2 unlike-btn" 
+                                data-type="article" 
+                                data-id="{{ article.id }}"
+                                title="Unlike">
+                            <i class="fas fa-heart-broken"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Liked Events -->
+    {% if liked_events %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-heart me-2 text-danger"></i>Events You've Liked</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for event in liked_events %}
+                <div class="col-md-6 mb-3">
+                    <div class="d-flex">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                <a href="{{ url_for('core.event_detail', id=event.id) }}">{{ event.title }}</a>
+                            </h6>
+                            <p class="mb-1 text-muted small">
+                                <i class="fas fa-calendar-alt me-1"></i>{{ event.start_date.strftime('%b %d, %Y') if event.start_date else 'No date' }}
+                                <br><i class="fas fa-map-marker-alt me-1"></i>{{ event.location }}
+                            </p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger ms-2 unlike-btn" 
+                                data-type="event" 
+                                data-id="{{ event.id }}"
+                                title="Unlike">
+                            <i class="fas fa-heart-broken"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Liked Publications -->
+    {% if liked_publications %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-heart me-2 text-danger"></i>Publications You've Liked</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for publication in liked_publications %}
+                <div class="col-md-6 mb-3">
+                    <div class="d-flex">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                <a href="{{ url_for('core.publication_detail', id=publication.id) }}">{{ publication.title }}</a>
+                            </h6>
+                            <p class="mb-1 text-muted small">
+                                {% if publication.published_date %}
+                                <i class="fas fa-calendar-alt me-1"></i>{{ publication.published_date.strftime('%b %d, %Y') }}
+                                {% endif %}
+                                {% if publication.publisher %}
+                                <br><i class="fas fa-building me-1"></i>{{ publication.publisher }}
+                                {% endif %}
+                            </p>
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger ms-2 unlike-btn" 
+                                data-type="publication" 
+                                data-id="{{ publication.id }}"
+                                title="Unlike">
+                            <i class="fas fa-heart-broken"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if not liked_articles and not liked_events and not liked_publications %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>You haven't liked any content yet. Browse articles, events, and publications and click the heart icon to like them.
+    </div>
+    {% endif %}
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle unlike buttons
+        const unlikeBtns = document.querySelectorAll('.unlike-btn');
+        unlikeBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const contentType = this.dataset.type;
+                const contentId = this.dataset.id;
+                
+                // Send API request to toggle like
+                fetch(`/api/like/${contentType}/${contentId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove the parent element (the whole liked item)
+                        this.closest('.col-md-6').remove();
+                        
+                        // Update the like count in the stats
+                        const statElement = document.querySelector(`.stat-value:has(+ .stat-label:contains('${contentType.charAt(0).toUpperCase() + contentType.slice(1)}s Liked'))`);
+                        if (statElement) {
+                            statElement.textContent = data.like_count;
+                        }
+                        
+                        // If no more items, reload the page to show the "no liked content" message
+                        const container = document.querySelector(`.card-body:has(.row:empty)`);
+                        if (container) {
+                            location.reload();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %} 

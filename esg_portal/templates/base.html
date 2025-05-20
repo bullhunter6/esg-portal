@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ESG News Portal{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    {% block styles %}{% endblock %}
+</head>
+<body{% if request.path.startswith('/admin') %} class="admin-page"{% endif %}>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('core.index') }}">
+                <i class="fas fa-leaf me-2" style="font-size: 1.5rem; color: var(--environmental);"></i>
+                <span>ESG Portal</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'core.index' %}active{% endif %}" href="{{ url_for('core.index') }}">
+                            <i class="fas fa-home me-1"></i>Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'core.articles' %}active{% endif %}" href="{{ url_for('core.articles') }}">
+                            <i class="fas fa-newspaper me-1"></i>Articles
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'core.publications' %}active{% endif %}" href="{{ url_for('core.publications') }}">
+                            <i class="fas fa-book me-1"></i>Publications
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'core.events' %}active{% endif %}" href="{{ url_for('core.events') }}">
+                            <i class="fas fa-calendar-alt me-1"></i>Events
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint and request.endpoint.startswith('esg_scores.') %}active{% endif %}" href="{{ url_for('esg_scores.index') }}">
+                            <i class="fas fa-chart-line me-1"></i>ESG Scores
+                        </a>
+                    </li>
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint and request.endpoint.startswith('admin.') %}active{% endif %}" href="{{ url_for('admin.dashboard') }}">
+                            <i class="fas fa-tachometer-alt me-1"></i>Admin
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle me-1"></i>{{ current_user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                                <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="fas fa-user me-1"></i>Profile</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('core.dashboard') }}"><i class="fas fa-bookmark me-1"></i>Dashboard</a></li>
+                                {% if current_user.is_admin %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('admin.dashboard') }}"><i class="fas fa-cog me-1"></i>Admin</a></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt me-1"></i>Logout</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'auth.login' %}active{% endif %}" href="{{ url_for('auth.login') }}">
+                                <i class="fas fa-sign-in-alt me-1"></i>Login
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'auth.register' %}active{% endif %}" href="{{ url_for('auth.register') }}">
+                                <i class="fas fa-user-plus me-1"></i>Register
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="fade-in">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-4" style="background-color: var(--neutral-800); color: var(--neutral-200);">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h5 class="text-white">ESG News Portal</h5>
+                    <p class="text-white-50">Your source for Environmental, Social, and Governance news and information.</p>
+                    <div class="d-flex gap-2">
+                        <a href="#" class="btn btn-icon btn-outline-light"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="btn btn-icon btn-outline-light"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="btn btn-icon btn-outline-light"><i class="fab fa-facebook"></i></a>
+                    </div>
+                </div>
+                <div class="col-md-2 mb-4 mb-md-0">
+                    <h6 class="text-white">Navigation</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="{{ url_for('core.index') }}" class="text-white-50">Home</a></li>
+                        <li><a href="{{ url_for('core.articles') }}" class="text-white-50">Articles</a></li>
+                        <li><a href="{{ url_for('core.publications') }}" class="text-white-50">Publications</a></li>
+                        <li><a href="{{ url_for('core.events') }}" class="text-white-50">Events</a></li>
+                        <li><a href="{{ url_for('esg_scores.index') }}" class="text-white-50">ESG Scores</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2 mb-4 mb-md-0">
+                    <h6 class="text-white">Resources</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50">About ESG</a></li>
+                        <li><a href="#" class="text-white-50">Methodology</a></li>
+                        <li><a href="#" class="text-white-50">Research</a></li>
+                        <li><a href="#" class="text-white-50">Data Sources</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-white">Subscribe to our Newsletter</h6>
+                    <p class="text-white-50">Stay updated with the latest ESG news and insights.</p>
+                    <form class="d-flex">
+                        <input type="email" class="form-control me-2" placeholder="Your email">
+                        <button type="submit" class="btn btn-primary">Subscribe</button>
+                    </form>
+                </div>
+            </div>
+            <hr class="mt-4 mb-3" style="border-color: var(--neutral-600);">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0 text-white-50">&copy; {{ now.year }} ESG News Portal. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <ul class="list-inline mb-0">
+                        <li class="list-inline-item"><a href="#" class="text-white-50">Privacy Policy</a></li>
+                        <li class="list-inline-item"><a href="#" class="text-white-50">Terms of Service</a></li>
+                        <li class="list-inline-item"><a href="#" class="text-white-50">Contact Us</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    <!-- SSE Client -->
+    <script src="{{ url_for('static', filename='js/websockets/socket.js') }}"></script>
+    
+    {% block scripts %}{% endblock %}
+    
+    <script>
+        // Ensure any lingering modal backdrops are removed
+        document.addEventListener('DOMContentLoaded', function() {
+            // Remove any existing modal backdrops
+            document.querySelectorAll('.modal-backdrop').forEach(function(backdrop) {
+                backdrop.remove();
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Ignore Python cache, virtual environments, database, logs, and generated files
+__pycache__/
+env/
+ai-powered-esg-compliance/
+instance/
+migrations/
+esg_portal.egg-info/
+chroma_db_agthia_report/
+chroma_db_company_report/
+chroma_db_esg_policy/
+*.sqlite3
+*.db
+*.log
+*.pdf
+*.egg-info/
+*.pyc
+*.pyo
+*.pyd
+*.DS_Store
+*.swp
+*.swo
+*.bak
+*.tmp
+*.ipynb_checkpoints/
+# Ignore font files (if not needed in repo)
+fonts/
+# VSCode settings
+.vscode/
+# Output reports
+*_ESG_Gap_Analysis_Report_*.pdf
+esg_gap_analysis_report.txt

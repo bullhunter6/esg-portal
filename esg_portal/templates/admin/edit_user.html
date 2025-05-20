@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User: {{ user.username }} - ESG News Portal{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-3"><i class="fas fa-user-edit me-2" style="color: var(--primary-600);"></i>Edit User: {{ user.username }}</h1>
+            <p class="lead">Update user information and permissions.</p>
+        </div>
+    </div>
+    
+    <!-- Admin Navigation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
+                        <a href="{{ url_for('admin.users') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-users me-1"></i>Users
+                        </a>
+                        <a href="{{ url_for('admin.user_detail', id=user.id) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-user me-1"></i>User Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background-color: var(--primary-600); color: white;">
+                    <h5 class="mb-0"><i class="fas fa-user-edit me-2"></i>Edit User</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('admin.edit_user', id=user.id) }}">
+                        <!-- Basic Information -->
+                        <div class="mb-4">
+                            <h5>Basic Information</h5>
+                            <hr>
+                            
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="first_name" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name or '' }}">
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="last_name" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name or '' }}">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Password -->
+                        <div class="mb-4">
+                            <h5>Password</h5>
+                            <hr>
+                            
+                            <div class="mb-3">
+                                <label for="password" class="form-label">New Password</label>
+                                <input type="password" class="form-control" id="password" name="password" placeholder="Leave blank to keep current password">
+                                <div class="form-text">Only fill this if you want to change the user's password.</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Permissions -->
+                        <div class="mb-4">
+                            <h5>Permissions</h5>
+                            <hr>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="is_admin" name="is_admin" {% if user.is_admin %}checked{% endif %}>
+                                <label class="form-check-label" for="is_admin">
+                                    Administrator
+                                </label>
+                                <div class="form-text">Administrators have full access to all features, including this admin panel.</div>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                                <label class="form-check-label" for="is_active">
+                                    Active Account
+                                </label>
+                                <div class="form-text">Inactive accounts cannot log in to the system.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>Save Changes
+                            </button>
+                            <a href="{{ url_for('admin.user_detail', id=user.id) }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

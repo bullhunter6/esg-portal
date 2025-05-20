@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}View Results - ESG Portal{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('core.index') }}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('esg_scores.index') }}">ESG Scores</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('esg_scores.file_uploads') }}">File Upload History</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">View Results</li>
+                </ol>
+            </nav>
+
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Results for {{ file_upload.original_filename }}</h5>
+                        {# Use the updated download endpoint logic #}
+                        <a href="{{ url_for('esg_scores.download_file', task_id=file_upload.task_id) }}" class="btn btn-light btn-sm">
+                            <i class="fas fa-download me-1"></i> Download Excel
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+
+                    {# Display general error message if passed from backend #}
+                    {% if error_message %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2"></i> {{ error_message }}
+                    </div>
+                    {% endif %}
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i> This is a summary of the processed data. For full details, download the Excel file.
+                    </div>
+
+                    {% if results and results.using_updated_file %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i> <strong>Note:</strong> Displaying data from the updated file (potentially with ESG scores).
+                    </div>
+                    {% elif results %} {# Check if results exist before accessing its keys #}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i> <strong>Note:</strong> Displaying data from the original processed file. Updated file with ESG scores might not exist or wasn't used.
+                    </div>
+                    {% endif %}
+
+                    {# --- Sheet Selection Dropdown --- #}
+                    {% if results and results.sheet_names|length > 0 %}
+                    <div class="mb-3">
+                        <label for="sheetSelector" class="form-label">Select Sheet to View:</label>
+                        <select class="form-select" id="sheetSelector">
+                            {% for sheet_name in results.sheet_names %}
+                                <option value="{{ sheet_name }}" {% if sheet_name == results.current_sheet %}selected{% endif %}>
+                                    {{ sheet_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="alert alert-secondary"> {# Changed from info for less emphasis #}
+                        <i class="fas fa-table me-2"></i> <strong>Displaying Sheet:</strong> {{ results.current_sheet }}
+                        {% if results.found_scores %}
+                        <span class="badge bg-success ms-2">ESG Scores Found in this Sheet</span>
+                        {% else %}
+                        <span class="badge bg-secondary ms-2">ESG Scores Not Detected in this Sheet</span>
+                        {% endif %}
+                    </div>
+
+                    {% if results.summary_rows|length > 0 %}
+                    <div class="table-responsive mt-3">
+                        <table class="table table-striped table-hover table-bordered"> {# Added table-bordered #}
+                            <thead class="table-dark">
+                                <tr>
+                                    {% for header in results.summary_headers %}
+                                    <th>{{ header }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in results.summary_rows %}
+                                <tr>
+                                    {% for cell in row %}
+                                    <td>
+                                        {# Handle None, empty strings, and 'nan' explicitly #}
+                                        {% if cell is none or cell == '' or cell|lower == 'nan' %}
+                                            <span class="text-muted">-</span> {# Use muted text for clarity #}
+                                        {% else %}
+                                            {{ cell }}
+                                        {% endif %}
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i> No data rows found in the selected sheet ('{{ results.current_sheet }}').
+                    </div>
+                    {% endif %}
+
+                    {% elif not error_message %} {# Only show this if no sheets and no specific error #}
+                     <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i> No sheets were found in the results file.
+                    </div>
+                    {% endif %}
+                    {# --- End of Sheet Specific Content --- #}
+
+
+                    <div class="mt-4">
+                        <a href="{{ url_for('esg_scores.file_uploads') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Upload History
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sheetSelector = document.getElementById('sheetSelector');
+
+        if (sheetSelector) {
+            sheetSelector.addEventListener('change', function() {
+                const selectedSheet = this.value;
+                // Construct the new URL correctly, preserving the base path
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('sheet', selectedSheet); // Set or update the 'sheet' parameter
+                window.location.href = currentUrl.toString(); // Reload page with new query parameter
+            });
+        }
+
+         // Optional: Add hover effect or other JS enhancements if needed
+         // Example: Make table rows highlightable
+         const tableRows = document.querySelectorAll('tbody tr');
+         tableRows.forEach(row => {
+             row.addEventListener('mouseenter', () => row.style.backgroundColor = '#f5f5f5');
+             row.addEventListener('mouseleave', () => row.style.backgroundColor = '');
+         });
+    });
+</script>
+{% endblock %}

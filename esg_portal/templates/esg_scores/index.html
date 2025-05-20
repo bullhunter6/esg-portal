@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}ESG Scores - ESG News Portal{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Hero Section -->
+    <section class="mb-5 text-center">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <h1 class="display-4 mb-3 fade-in-element">ESG Scores Dashboard</h1>
+                <p class="lead mb-4 fade-in-element">Access and analyze Environmental, Social, and Governance (ESG) scores from multiple rating agencies to make informed decisions.</p>
+                <div class="d-flex justify-content-center gap-3 fade-in-element">
+                    <a href="{{ url_for('esg_scores.search') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-search me-2"></i>Search ESG Scores
+                    </a>
+                    <a href="#features" class="btn btn-outline-primary btn-lg">
+                        <i class="fas fa-info-circle me-2"></i>Learn More
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="mb-5">
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h2 class="mb-4 fade-in-element">Key Features</h2>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 fade-in-element">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-search me-2 text-primary"></i>ESG Score Search</h5>
+                        <p class="card-text">Search for ESG scores from multiple rating agencies for any company. Compare scores across different providers and view detailed information.</p>
+                        <div class="mt-3">
+                            <a href="{{ url_for('esg_scores.search') }}" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i>Search ESG Scores
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 fade-in-element">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-file-excel me-2 text-success"></i>Excel Updater</h5>
+                        <p class="card-text">Upload an Excel file with company names and automatically update it with the latest ESG scores from multiple rating agencies.</p>
+                        <div class="mt-3">
+                            <a href="{{ url_for('esg_scores.excel_updater') }}" class="btn btn-success">
+                                <i class="fas fa-file-excel me-1"></i>Update Excel File
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ESG Categories Section -->
+    <section id="esg-categories" class="mb-5">
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h2 class="mb-4 fade-in-element">Understanding ESG Scores</h2>
+                <p class="lead mb-4 fade-in-element">Environmental, Social, and Governance (ESG) scores are ratings that assess a company's performance in these three key areas:</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4 fade-in-element">
+                <div class="card h-100 shadow-sm environmental-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-leaf me-2" style="color: var(--environmental);"></i>Environmental</h5>
+                        <p class="card-text">Measures a company's impact on the natural environment, including carbon emissions, resource usage, waste management, and climate change initiatives.</p>
+                        <ul class="mt-3">
+                            <li>Carbon Footprint</li>
+                            <li>Energy Efficiency</li>
+                            <li>Waste Management</li>
+                            <li>Water Usage</li>
+                            <li>Climate Change Policies</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 fade-in-element">
+                <div class="card h-100 shadow-sm social-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-users me-2" style="color: var(--social);"></i>Social</h5>
+                        <p class="card-text">Evaluates a company's relationships with employees, suppliers, customers, and communities, including labor practices, diversity, human rights, and community engagement.</p>
+                        <ul class="mt-3">
+                            <li>Labor Practices</li>
+                            <li>Diversity & Inclusion</li>
+                            <li>Human Rights</li>
+                            <li>Community Relations</li>
+                            <li>Product Safety</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 fade-in-element">
+                <div class="card h-100 shadow-sm governance-card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-balance-scale me-2" style="color: var(--governance);"></i>Governance</h5>
+                        <p class="card-text">Assesses a company's leadership, executive compensation, audits, internal controls, shareholder rights, and transparency in reporting.</p>
+                        <ul class="mt-3">
+                            <li>Board Structure</li>
+                            <li>Executive Compensation</li>
+                            <li>Audit & Controls</li>
+                            <li>Shareholder Rights</li>
+                            <li>Business Ethics</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Rating Agencies Section -->
+    <section id="rating-agencies">
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h2 class="mb-4 fade-in-element">Available Rating Agencies</h2>
+                <p class="lead mb-4 fade-in-element">Our platform aggregates ESG scores from multiple leading rating agencies:</p>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm fade-in-element">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Agency</th>
+                                <th>Score Range</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>S&P Global</strong></td>
+                                <td>0-100 (higher is better)</td>
+                                <td>Comprehensive ESG scores with environmental, social, and governance components.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Sustainalytics</strong></td>
+                                <td>0-100 (lower is better)</td>
+                                <td>ESG risk ratings that measure a company's exposure to industry-specific material ESG risks.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>ISS</strong></td>
+                                <td>Letter grades (A+ to D-)</td>
+                                <td>Corporate ratings based on industry-specific environmental and social challenges.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>LSEG</strong></td>
+                                <td>0-100 (higher is better)</td>
+                                <td>Transparent scoring methodology with over 450 metrics across 10 themes.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>MSCI</strong></td>
+                                <td>Letter grades (AAA to CCC)</td>
+                                <td>Measures a company's resilience to long-term ESG risks.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>CDP</strong></td>
+                                <td>Letter grades (A to F)</td>
+                                <td>Focuses on environmental impact, particularly climate change, water security, and deforestation.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %} 

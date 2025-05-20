@@ -1,0 +1,87 @@
+{% extends "layout.html" %}
+
+{% block title %}Update Excel{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>ESG Score Updater</h1>
+        
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
+        
+        <form method="POST" enctype="multipart/form-data" class="mt-4 p-4 border rounded bg-white" onsubmit="showLoader()">
+            <div class="mb-3">
+                <label for="file" class="form-label">Upload Excel File:</label>
+                <input type="file" name="file" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="year" class="form-label">Year:</label>
+                <input type="text" name="year" class="form-control" value="2023">
+            </div>
+            <button type="submit" class="btn btn-primary">Upload and Process</button>
+        </form>
+
+        <!-- Loader -->
+        <div id="loading" class="loader" style="display: none;"></div>
+
+        {% if summary_headers and summary_rows %}
+            <h2>Summary</h2>
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            {% for header in summary_headers %}
+                                <th>{{ header }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in summary_rows %}
+                            <tr>
+                                {% for cell in row %}
+                                    <td>{{ cell }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-center">
+                <a href="{{ download_link }}" class="btn btn-success">Download Updated File</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <style>
+        .loader {
+            width: fit-content;
+            font-weight: bold;
+            font-family: monospace;
+            white-space: pre;
+            font-size: 30px;
+            line-height: 1.2em;
+            height: 1.2em;
+            overflow: hidden;
+            margin: 20px auto;
+            text-align: center;
+        }
+        .loader:before {
+            content: "Loading...\A⌰oading...\A⌰⍜ading...\A⌰⍜⏃ding...\A⌰⍜⏃⎅ing...\A⌰⍜⏃⎅⟟ng...\A⌰⍜⏃⎅⟟⋏g...\A⌰⍜⏃⎅⟟⋏☌...\A⌰⍜⏃⎅⟟⋏☌⟒..\A⌰⍜⏃⎅⟟⋏☌⟒⏁.\A⌰⍜⏃⎅⟟⋏☌⟒⏁⋔";
+            white-space: pre;
+            display: inline-block;
+            animation: l39 1s infinite steps(11) alternate;
+        }
+        @keyframes l39 {
+            100% { transform: translateY(-100%); }
+        }
+    </style>
+
+    <script>
+        function showLoader() {
+            document.getElementById('loading').style.display = 'block';
+        }
+    </script>
+{% endblock %}

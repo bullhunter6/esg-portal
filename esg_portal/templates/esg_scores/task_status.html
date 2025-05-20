@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Task Status{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('core.index') }}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('esg_scores.index') }}">ESG Scores</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('esg_scores.excel_updater') }}">Excel Updater</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Task Status</li>
+                </ol>
+            </nav>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5>Processing Status: {{ file_upload.original_filename }}</h5>
+                </div>
+                <div class="card-body">
+                    <div id="status-container">
+                        <div class="alert alert-info" id="status-message">
+                            {{ initial_status.message if initial_status.message else 'Connecting to server...' }}
+                        </div>
+                        
+                        <div class="progress mb-3" style="height: 25px;">
+                            <div id="progress-bar" 
+                                 class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" 
+                                 data-progress="{{ initial_status.progress if initial_status.progress else 0 }}"
+                                 aria-valuenow="{{ initial_status.progress if initial_status.progress else 0 }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                {{ initial_status.progress if initial_status.progress else 0 }}%
+                            </div>
+                        </div>
+                        
+                        <div id="processing-details" class="mb-3">
+                            <p id="current-company">
+                                {% if initial_status.current_company %}
+                                Processing: <strong>{{ initial_status.current_company }}</strong>
+                                {% endif %}
+                            </p>
+                            <p id="processed-count">
+                                {% if initial_status.processed_companies and initial_status.total_companies %}
+                                Processed <strong>{{ initial_status.processed_companies }}</strong> out of <strong>{{ initial_status.total_companies }}</strong> companies
+                                {% endif %}
+                            </p>
+                        </div>
+                        
+                        <div id="action-buttons" class="mb-3">
+                            <button id="cancel-button" class="btn btn-danger" 
+                                    {% if initial_status.status in ['complete', 'error', 'cancelled'] %}disabled{% endif %}>
+                                Cancel Processing
+                            </button>
+                            
+                            <a href="{{ url_for('esg_scores.excel_updater') }}" class="btn btn-secondary">
+                                Back to Excel Updater
+                            </a>
+                            
+                            <a id="download-button" href="#" class="btn btn-success" style="display: none;">
+                                Download Results
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div id="results-container" style="display: none;">
+                        <h5 class="mt-4">Processing Results</h5>
+                        <div class="table-responsive">
+                            <table id="results-table" class="table table-striped table-bordered">
+                                <thead id="results-header">
+                                    <!-- Will be populated by JavaScript -->
+                                </thead>
+                                <tbody id="results-body">
+                                    <!-- Will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set initial progress bar width based on data attribute
+        const progressBar = document.getElementById('progress-bar');
+        if (progressBar) {
+            const progress = progressBar.getAttribute('data-progress');
+            progressBar.style.width = progress + '%';
+        }
+        
+        const taskId = "{{ task_id }}";
+        let eventSource;
+        
+        // Function to connect to SSE stream
+        function connectSSE() {
+            // Close any existing connection
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            // Connect to SSE endpoint
+            eventSource = new EventSource("{{ url_for('esg_scores.sse_task_stream', task_id=task_id) }}");
+            
+            // Handle connection open
+            eventSource.onopen = function() {
+                console.log('SSE connection established');
+            };
+            
+            // Handle messages
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                updateUI(data);
+            };
+            
+            // Handle errors
+            eventSource.onerror = function(error) {
+                console.error('SSE connection error:', error);
+                
+                // Try to reconnect after a delay
+                setTimeout(function() {
+                    // Check if we should reconnect (not if task is complete)
+                    const statusElement = document.getElementById('status-message');
+                    if (statusElement && !statusElement.classList.contains('alert-success')) {
+                        connectSSE();
+                    }
+                }, 5000);
+            };
+        }
+        
+        // Function to update UI based on status
+        function updateUI(data) {
+            console.log('Received update:', data);
+            
+            // Update status message
+            const statusElement = document.getElementById('status-message');
+            if (statusElement) {
+                statusElement.textContent = data.message || 'Processing...';
+                
+                // Update status alert class
+                statusElement.className = 'alert';
+                if (data.status === 'complete') {
+                    statusElement.classList.add('alert-success');
+                } else if (data.status === 'error') {
+                    statusElement.classList.add('alert-danger');
+                } else if (data.status === 'cancelled') {
+                    statusElement.classList.add('alert-warning');
+                } else {
+                    statusElement.classList.add('alert-info');
+                }
+            }
+            
+            // Update progress bar
+            const progressBar = document.getElementById('progress-bar');
+            if (progressBar) {
+                const progress = data.progress || 0;
+                progressBar.style.width = progress + '%';
+                progressBar.setAttribute('aria-valuenow', progress);
+                progressBar.textContent = progress + '%';
+                
+                // Update progress bar class
+                progressBar.className = 'progress-bar';
+                if (data.status === 'complete') {
+                    progressBar.classList.add('bg-success');
+                } else if (data.status === 'error' || data.status === 'cancelled') {
+                    progressBar.classList.add('bg-danger');
+                } else {
+                    progressBar.classList.add('progress-bar-striped', 'progress-bar-animated');
+                }
+            }
+            
+            // Update current company
+            const currentCompanyElement = document.getElementById('current-company');
+            if (currentCompanyElement) {
+                if (data.current_company) {
+                    currentCompanyElement.innerHTML = `Processing: <strong>${data.current_company}</strong>`;
+                    currentCompanyElement.style.display = 'block';
+                } else {
+                    currentCompanyElement.style.display = 'none';
+                }
+            }
+            
+            // Update processed count
+            const processedCountElement = document.getElementById('processed-count');
+            if (processedCountElement) {
+                if (data.processed_companies !== undefined && data.total_companies) {
+                    processedCountElement.innerHTML = `Processed <strong>${data.processed_companies}</strong> out of <strong>${data.total_companies}</strong> companies`;
+                    processedCountElement.style.display = 'block';
+                } else {
+                    processedCountElement.style.display = 'none';
+                }
+            }
+            
+            // Update cancel button
+            const cancelButton = document.getElementById('cancel-button');
+            if (cancelButton) {
+                if (data.status === 'complete' || data.status === 'error' || data.status === 'cancelled') {
+                    cancelButton.disabled = true;
+                } else {
+                    cancelButton.disabled = false;
+                }
+            }
+            
+            // Update download button
+            const downloadButton = document.getElementById('download-button');
+            if (downloadButton) {
+                if (data.status === 'complete') {
+                    downloadButton.href = "{{ url_for('esg_scores.download_file', task_id=task_id) }}";
+                    downloadButton.style.display = 'inline-block';
+                } else {
+                    downloadButton.style.display = 'none';
+                }
+            }
+            
+            // Show results table if processing is complete
+            if (data.status === 'complete' && data.summary_headers && data.summary_rows) {
+                // Show results container
+                const resultsContainer = document.getElementById('results-container');
+                if (resultsContainer) {
+                    resultsContainer.style.display = 'block';
+                }
+                
+                // Populate results table header
+                const resultsHeader = document.getElementById('results-header');
+                if (resultsHeader) {
+                    let headerHtml = '<tr>';
+                    data.summary_headers.forEach(header => {
+                        headerHtml += `<th>${header}</th>`;
+                    });
+                    headerHtml += '</tr>';
+                    resultsHeader.innerHTML = headerHtml;
+                }
+                
+                // Populate results table body
+                const resultsBody = document.getElementById('results-body');
+                if (resultsBody) {
+                    let bodyHtml = '';
+                    data.summary_rows.forEach(row => {
+                        bodyHtml += '<tr>';
+                        row.forEach(cell => {
+                            bodyHtml += `<td>${cell}</td>`;
+                        });
+                        bodyHtml += '</tr>';
+                    });
+                    resultsBody.innerHTML = bodyHtml;
+                }
+                
+                // Close the SSE connection since we're done
+                if (eventSource) {
+                    eventSource.close();
+                }
+            }
+        }
+        
+        // Set up cancel button
+        const cancelButton = document.getElementById('cancel-button');
+        if (cancelButton) {
+            cancelButton.addEventListener('click', function() {
+                if (confirm('Are you sure you want to cancel this task?')) {
+                    fetch("{{ url_for('esg_scores.cancel_task_route', task_id=task_id) }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update UI to show cancelled state
+                            const statusElement = document.getElementById('status-message');
+                            if (statusElement) {
+                                statusElement.textContent = 'Task cancelled';
+                                statusElement.className = 'alert alert-warning';
+                            }
+                            
+                            // Disable cancel button
+                            cancelButton.disabled = true;
+                        } else {
+                            alert('Failed to cancel task: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error cancelling task:', error);
+                        alert('An error occurred while trying to cancel the task');
+                    });
+                }
+            });
+        }
+        
+        // Connect to SSE stream
+        connectSSE();
+    });
+</script>
+{% endblock %}

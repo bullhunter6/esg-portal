@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Events - ESG News Portal{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Page Header -->
+    <div class="row align-items-center mb-4">
+        <div class="col-md-6">
+            <h1 class="mb-0">ESG Events</h1>
+            <p class="lead text-muted">Discover upcoming events in the ESG space</p>
+        </div>
+        <div class="col-md-6">
+            <form action="{{ url_for('core.events') }}" method="get" class="search-form">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control" placeholder="Search events..." value="{{ search_term or '' }}">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                {% if filter_option %}
+                <input type="hidden" name="option" value="{{ filter_option }}">
+                {% endif %}
+                {% if esg_filter %}
+                <input type="hidden" name="esg" value="{{ esg_filter }}">
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Time Filter -->
+                        <div class="col-md-6 mb-3 mb-md-0">
+                            <h5 class="card-title h6">Time Filter</h5>
+                            <div class="btn-group w-100" role="group">
+                                <a href="{{ url_for('core.events', option='upcoming', esg=esg_filter, search=search_term) }}" class="btn btn-outline-primary {% if filter_option == 'upcoming' %}active{% endif %}">
+                                    Upcoming <span class="badge bg-secondary">{{ upcoming_count }}</span>
+                                </a>
+                                <a href="{{ url_for('core.events', option='today', esg=esg_filter, search=search_term) }}" class="btn btn-outline-primary {% if filter_option == 'today' %}active{% endif %}">
+                                    Today
+                                </a>
+                                <a href="{{ url_for('core.events', option='past', esg=esg_filter, search=search_term) }}" class="btn btn-outline-primary {% if filter_option == 'past' %}active{% endif %}">
+                                    Past <span class="badge bg-secondary">{{ past_count }}</span>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- ESG Filter -->
+                        <div class="col-md-6">
+                            <h5 class="card-title h6">ESG Category</h5>
+                            <div class="btn-group w-100" role="group">
+                                <a href="{{ url_for('core.events', option=filter_option, search=search_term) }}" class="btn btn-outline-primary {% if not esg_filter %}active{% endif %}">
+                                    All
+                                </a>
+                                <a href="{{ url_for('core.events', option=filter_option, esg='environmental', search=search_term) }}" class="btn btn-outline-success {% if esg_filter == 'environmental' %}active{% endif %}">
+                                    Environmental
+                                </a>
+                                <a href="{{ url_for('core.events', option=filter_option, esg='social', search=search_term) }}" class="btn btn-outline-info {% if esg_filter == 'social' %}active{% endif %}">
+                                    Social
+                                </a>
+                                <a href="{{ url_for('core.events', option=filter_option, esg='governance', search=search_term) }}" class="btn btn-outline-secondary {% if esg_filter == 'governance' %}active{% endif %}">
+                                    Governance
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Active Filters -->
+                    {% if search_term or esg_filter %}
+                    <div class="mt-3">
+                        <h6 class="d-inline-block me-2">Active Filters:</h6>
+                        {% if search_term %}
+                        <span class="badge bg-primary me-2">
+                            Search: {{ search_term }}
+                            <a href="{{ url_for('core.events', option=filter_option, esg=esg_filter) }}" class="text-white ms-1">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        </span>
+                        {% endif %}
+                        {% if esg_filter %}
+                        <span class="badge bg-{{ esg_filter }} me-2">
+                            {{ esg_filter|capitalize }}
+                            <a href="{{ url_for('core.events', option=filter_option, search=search_term) }}" class="text-white ms-1">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        </span>
+                        {% endif %}
+                        <a href="{{ url_for('core.events') }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>Clear All
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Events List -->
+    <div class="row">
+        {% for event in events %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm event-card" data-id="{{ event.id }}">
+                {% if event.image_url %}
+                <img src="{{ event.image_url }}" class="card-img-top" alt="{{ event.title }}">
+                {% endif %}
+                <div class="card-body">
+                    <div class="d-flex mb-3">
+                        <div class="event-date me-3">
+                            <div class="day">{{ event.start_date.day }}</div>
+                            <div class="month">{{ event.start_date.strftime('%b') }}</div>
+                        </div>
+                        <div>
+                            <h5 class="card-title">{{ event.title }}</h5>
+                            <p class="card-text small text-muted">
+                                {% if event.location %}
+                                <i class="fas fa-map-marker-alt me-1"></i> {{ event.location }}
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <p class="card-text">{{ event.event_summary|truncate(100) }}</p>
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        {% for category in event.esg_categories %}
+                        <span class="badge bg-{{ category|lower }}">{{ category }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <small class="text-muted me-2">Source: {{ event.source }}</small>
+                            {% if current_user.is_authenticated %}
+                            <button class="btn btn-sm btn-link text-danger p-0 like-btn" 
+                                    data-type="event" 
+                                    data-id="{{ event.id }}" 
+                                    title="Like this event">
+                                <i class="far fa-heart"></i>
+                                <span class="like-count">0</span>
+                            </button>
+                            {% else %}
+                            <small class="text-muted">
+                                <i class="far fa-heart"></i>
+                                <span class="like-count">0</span>
+                            </small>
+                            {% endif %}
+                        </div>
+                        <a href="{{ url_for('core.event_detail', id=event.id) }}" class="btn btn-sm btn-outline-primary">
+                            Details <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+                <a href="{{ url_for('core.event_detail', id=event.id) }}" class="stretched-link"></a>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-info-circle me-3 fa-2x"></i>
+                    <div>
+                        <h5 class="alert-heading mb-1">No Events Found</h5>
+                        <p class="mb-0">No events found matching your criteria. Try adjusting your filters.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if pagination and pagination.pages > 1 %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if pagination.page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('core.events', page=pagination.page-1, option=filter_option, esg=esg_filter, search=search_term) }}">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="fas fa-chevron-left"></i></span>
+            </li>
+            {% endif %}
+            
+            {% for page in pagination.iter_pages() %}
+                {% if page %}
+                    {% if page == pagination.page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('core.events', page=page, option=filter_option, esg=esg_filter, search=search_term) }}">{{ page }}</a>
+                    </li>
+                    {% endif %}
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">…</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if pagination.page < pagination.pages %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('core.events', page=pagination.page+1, option=filter_option, esg=esg_filter, search=search_term) }}">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="fas fa-chevron-right"></i></span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+{% block scripts %}
+<!-- At the end of the body -->
+<script src="{{ url_for('static', filename='js/likes.js') }}"></script>
+{% endblock %}
+{% endblock %} 

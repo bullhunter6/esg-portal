@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}ESG News Portal - Publications{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4"><i class="fas fa-book me-2"></i>ESG Publications</h1>
+    
+    <!-- Search -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" action="{{ url_for('core.publications') }}" class="row g-3">
+                <div class="col-md-10">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" name="search" class="form-control" placeholder="Search publications by title, publisher, or content..." value="{{ search_term }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Publications List -->
+    {% if publications %}
+        <div class="row row-cols-1 g-4 mb-4">
+            {% for publication in publications %}
+                <div class="col">
+                    <div class="card shadow-sm" data-id="{{ publication.id }}">
+                        <div class="row g-0">
+                            <div class="col-md-3">
+                                {% if publication.image_url %}
+                                    <img src="{{ publication.image_url }}" class="img-fluid rounded-start h-100" alt="{{ publication.title }}" style="object-fit: cover;">
+                                {% else %}
+                                    <div class="bg-light text-center py-5 h-100 d-flex align-items-center justify-content-center">
+                                        <i class="fas fa-book fa-3x text-secondary"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-9">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ publication.title }}</h5>
+                                    <p class="card-text text-muted">
+                                        <small>
+                                            {% if publication.published %}
+                                                <i class="fas fa-calendar-alt me-1"></i>{{ publication.published.strftime('%b %d, %Y') }}
+                                            {% elif publication.published_date %}
+                                                <i class="fas fa-calendar-alt me-1"></i>{{ publication.published_date.strftime('%b %d, %Y') }}
+                                            {% endif %}
+                                            
+                                            {% if publication.publisher %}
+                                                <span class="ms-3"><i class="fas fa-building me-1"></i>{{ publication.publisher }}</span>
+                                            {% elif publication.source %}
+                                                <span class="ms-3"><i class="fas fa-building me-1"></i>{{ publication.source }}</span>
+                                            {% endif %}
+                                            
+                                            {% if publication.publication_type %}
+                                                <span class="ms-2"><i class="fas fa-file-alt me-1"></i>{{ publication.publication_type }}</span>
+                                            {% endif %}
+                                        </small>
+                                    </p>
+                                    
+                                    {% if publication.authors %}
+                                        <p class="card-text"><i class="fas fa-user-edit me-1"></i>{{ publication.authors }}</p>
+                                    {% endif %}
+                                    
+                                    <div class="mt-2 mb-3">
+                                        {% if publication.is_environmental %}
+                                            <span class="badge bg-success me-1">Environmental</span>
+                                        {% endif %}
+                                        {% if publication.is_social %}
+                                            <span class="badge bg-info me-1">Social</span>
+                                        {% endif %}
+                                        {% if publication.is_governance %}
+                                            <span class="badge bg-warning me-1">Governance</span>
+                                        {% endif %}
+                                        
+                                        {% if publication.categories %}
+                                            {% for category in publication.categories.split(',') %}
+                                                <span class="badge bg-secondary me-1">{{ category.strip() }}</span>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <a href="{{ url_for('core.publication_detail', id=publication.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-info-circle me-1"></i>View Details
+                                            </a>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            {% if current_user.is_authenticated %}
+                                            <button class="btn btn-sm btn-link text-danger like-btn me-2" 
+                                                    data-type="publication" 
+                                                    data-id="{{ publication.id }}" 
+                                                    title="Like this publication">
+                                                <i class="far fa-heart"></i>
+                                                <span class="like-count">0</span>
+                                            </button>
+                                            {% else %}
+                                            <span class="text-muted me-2">
+                                                <i class="far fa-heart"></i>
+                                                <span class="like-count">0</span>
+                                            </span>
+                                            {% endif %}
+                                            <a href="{{ publication.link }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-external-link-alt me-1"></i>Access Publication
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if pagination and pagination.pages > 1 %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('core.publications', page=pagination.page-1, search=search_term) }}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="fas fa-chevron-left"></i></span>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in pagination.iter_pages() %}
+                        {% if page_num %}
+                            <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
+                                <a class="page-link" href="{{ url_for('core.publications', page=page_num, search=search_term) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if pagination.page < pagination.pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('core.publications', page=pagination.page+1, search=search_term) }}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="fas fa-chevron-right"></i></span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle me-3 fa-2x"></i>
+                <div>
+                    <h5 class="alert-heading mb-1">No Publications Found</h5>
+                    <p class="mb-0">No publications found matching your criteria. Try adjusting your search.</p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{% block scripts %}
+<!-- At the end of the body -->
+<script src="{{ url_for('static', filename='js/likes.js') }}"></script>
+{% endblock %}
+{% endblock %} 

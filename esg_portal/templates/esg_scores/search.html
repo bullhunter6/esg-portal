@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+
+{% block title %}ESG Score Search - ESG News Portal{% endblock %}
+
+{% block styles %}
+<style>
+    .nav-tabs .nav-link {
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: var(--neutral-600);
+        font-weight: 500;
+        padding: 0.75rem 1rem;
+        transition: all var(--transition-normal);
+    }
+    
+    .nav-tabs .nav-link.active {
+        border-bottom: 3px solid var(--primary-600);
+        color: var(--primary-700);
+        background-color: transparent;
+    }
+    
+    .nav-tabs .nav-link:hover:not(.active) {
+        border-bottom: 3px solid var(--neutral-300);
+        color: var(--neutral-800);
+    }
+    
+    .score-display {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-align: center;
+        margin: 1rem 0;
+        padding: 0.5rem;
+        border-radius: 5px;
+    }
+    
+    .score-card {
+        transition: all var(--transition-normal);
+        border-radius: var(--border-radius-md);
+        overflow: hidden;
+    }
+    
+    .score-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .score-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--neutral-600);
+        margin-bottom: 0.25rem;
+    }
+    
+    .score-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    /* Score color classes with more explicit styling and debugging */
+    .high-score, 
+    .score-display.high-score {
+        color: #28a745 !important;  /* Green for high scores */
+        font-weight: bold;
+        border: 2px solid #28a745;  /* Add border for visibility */
+    }
+    
+    .medium-score, 
+    .score-display.medium-score {
+        color: #fd7e14 !important;  /* Orange for medium scores */
+        font-weight: bold;
+        border: 2px solid #fd7e14;  /* Add border for visibility */
+    }
+    
+    .low-score, 
+    .score-display.low-score {
+        color: #dc3545 !important;  /* Red for low scores */
+        font-weight: bold;
+        border: 2px solid #dc3545;  /* Add border for visibility */
+    }
+    
+    .no-score, 
+    .score-display.no-score {
+        color: #6c757d !important;  /* Gray for no scores */
+        font-style: italic;
+        border: 2px dashed #6c757d;  /* Add dashed border for visibility */
+    }
+    
+    .search-container {
+        background-color: var(--neutral-100);
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .loading {
+        color: #6c757d;
+        animation: pulse 1.5s infinite;
+    }
+    
+    .error {
+        color: #dc3545;
+    }
+    
+    .success {
+        color: #198754;
+    }
+    
+    #search-status {
+        min-height: 24px;
+        margin-top: 1rem;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    
+    /* Back button styling */
+    .back-btn {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        z-index: 10;
+        color: var(--neutral-700);
+        transition: all var(--transition-normal);
+        border-radius: var(--border-radius-sm);
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .back-btn:hover {
+        background-color: var(--neutral-100);
+        color: var(--primary-700);
+        text-decoration: none;
+        transform: translateX(-3px);
+    }
+    
+    .back-btn i {
+        margin-right: 0.5rem;
+    }
+    
+    .container-with-back-btn {
+        position: relative;
+        padding-top: 3.5rem;  /* Make space for the back button */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5 container-with-back-btn" id="esg-results-container">
+    <a href="{{ url_for('esg_scores.index') }}" class="back-btn">
+        <i class="fas fa-arrow-left"></i>Back to ESG Scores
+    </a>
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-3 fade-in-element"><i class="fas fa-search me-2"></i>ESG Score Search</h1>
+            <p class="lead fade-in-element">Search for ESG scores from multiple rating agencies for any company.</p>
+            <div id="search-status" class="small"></div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4 fade-in-element">
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'All' %}active{% endif %}" href="{{ url_for('esg_scores.search', tab='All', company_name=company_name) }}">
+                <i class="fas fa-globe me-1"></i>All Sources
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'S&P' %}active{% endif %}" href="{{ url_for('esg_scores.search', tab='S&P', company_name=company_name) }}">
+                <i class="fas fa-chart-line me-1"></i>S&P
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'Sustainalytics' %}active{% endif %}" href="{{ url_for('esg_scores.search', tab='Sustainalytics', company_name=company_name) }}">
+                <i class="fas fa-leaf me-1"></i>Sustainalytics
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'MSCI' %}active{% endif %}" href="{{ url_for('esg_scores.search', tab='MSCI', company_name=company_name) }}">
+                <i class="fas fa-chart-bar me-1"></i>MSCI
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'ISS' %}active{% endif %}" href="{{ url_for('esg_scores.search', tab='ISS', company_name=company_name) }}">
+                <i class="fas fa-balance-scale me-1"></i>ISS
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tab == 'LSEG' %}active{% endif %}" href="{{ url_for('esg_scores.search', tab='LSEG', company_name=company_name) }}">
+                <i class="fas fa-university me-1"></i>LSEG
+            </a>
+        </li>
+    </ul>
+
+    <!-- Search Form -->
+    <div class="search-container fade-in-element">
+        <form method="post" action="{{ url_for('esg_scores.search', tab=tab) }}" id="search-form">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label for="company_name" class="form-label">Company Name</label>
+                    <input type="text" class="form-control form-control-lg" id="company_name" name="company_name" 
+                           placeholder="Enter company name (e.g., Apple Inc.)" required 
+                           value="{{ company_name or '' }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Section -->
+    {% if company_name %}
+        {% if tab == "All" %}
+            <!-- All Sources Results -->
+            <div class="card shadow-sm mb-4 fade-in-element">
+                <div class="card-header bg-light">
+                    <h2 class="h4 mb-0"><i class="fas fa-chart-bar me-2"></i>ESG Scores for <span class="company-name">{{ company_name }}</span></h2>
+                </div>
+                <div class="card-body">
+                    <div class="row row-cols-1 row-cols-md-3 g-4">
+                        {% for source, score_data in scores.items() %}
+                        <div class="col">
+                            <div class="card h-100 shadow-sm score-card">
+                                <div class="card-header text-center py-3">
+                                    <h5 class="card-title mb-0">{{ source }}</h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <p class="score-display score-value {{ score_data.class }}" data-source="{{ source }}">{{ score_data.value }}</p>
+                                    <a href="{{ url_for('esg_scores.search', tab=source, company_name=company_name) }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-info-circle me-1"></i>View Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="alert alert-info mt-4">
+                        <i class="fas fa-info-circle me-2"></i>Click on "View Details" to see more information about each score.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Score Legend -->
+            <div class="card shadow-sm fade-in-element">
+                <div class="card-header bg-light">
+                    <h3 class="h5 mb-0"><i class="fas fa-info-circle me-2"></i>Score Legend</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4 class="h6">Score Colors</h4>
+                            <ul class="list-unstyled">
+                                <li><span class="high-score">●</span> <strong>Green:</strong> High Score / Leader</li>
+                                <li><span class="medium-score">●</span> <strong>Orange:</strong> Medium Score / Average</li>
+                                <li><span class="low-score">●</span> <strong>Red:</strong> Low Score / Laggard</li>
+                                <li><span class="no-score">●</span> <strong>Gray:</strong> No Score Available</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h4 class="h6">Score Ranges</h4>
+                            <ul class="list-unstyled">
+                                <li><strong>S&P:</strong> 0-100 (higher is better)</li>
+                                <li><strong>Sustainalytics:</strong> 0-100 (lower is better)</li>
+                                <li><strong>MSCI:</strong> AAA to CCC (AAA is best)</li>
+                                <li><strong>ISS:</strong> A+ to D- (A+ is best)</li>
+                                <li><strong>LSEG:</strong> 0-100 (higher is better)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% elif tab == "CDP" %}
+            <!-- CDP Results -->
+            <div class="card shadow-sm mb-4 fade-in-element">
+                <div class="card-header bg-light">
+                    <h2 class="h4 mb-0"><i class="fas fa-water me-2"></i>CDP Details for {{ company_name }}</h2>
+                </div>
+                <div class="card-body">
+                    {% if details.error %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>{{ details.error }}
+                        </div>
+                    {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Company Name</th>
+                                        <th>Response Name</th>
+                                        <th>Project Year</th>
+                                        <th>Response Status</th>
+                                        <th>Response Score Band</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if details %}
+                                        {% for entry in details %}
+                                        <tr>
+                                            <td>{{ entry.get('Company Name', 'N/A') }}</td>
+                                            <td>{{ entry.get('Response Name', 'N/A') }}</td>
+                                            <td>{{ entry.get('Project Year', 'N/A') }}</td>
+                                            <td>{{ entry.get('Response Status', 'N/A') }}</td>
+                                            <td>{{ entry.get('Response Score Band', 'N/A') }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center">No CDP responses available for {{ company_name }}</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <!-- Other Sources Results -->
+            <div class="card shadow-sm mb-4 fade-in-element">
+                <div class="card-header bg-light">
+                    <h2 class="h4 mb-0"><i class="fas fa-info-circle me-2"></i>{{ tab }} Details for {{ company_name }}</h2>
+                </div>
+                <div class="card-body">
+                    {% if details.error %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>{{ details.error }}
+                        </div>
+                    {% else %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered">
+                                <thead class="table-primary">
+                                    <tr>
+                                        <th>Attribute</th>
+                                        <th>Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for key, value in details.items() %}
+                                        <tr>
+                                            <td><strong>{{ key }}</strong></td>
+                                            <td>{{ value }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info fade-in-element">
+            <i class="fas fa-info-circle me-2"></i>Enter a company name to search for ESG scores.
+        </div>
+        
+        <!-- Getting Started Guide -->
+        <div class="card shadow-sm mt-4 fade-in-element">
+            <div class="card-header bg-light">
+                <h3 class="h5 mb-0"><i class="fas fa-book me-2"></i>Getting Started Guide</h3>
+            </div>
+            <div class="card-body">
+                <p>Follow these steps to search for ESG scores:</p>
+                <ol>
+                    <li>Enter a company name in the search box above.</li>
+                    <li>Click the "Search" button to retrieve scores from all sources.</li>
+                    <li>View the summary of scores from all rating agencies.</li>
+                    <li>Click on "View Details" for any source to see more detailed information.</li>
+                    <li>Use the tabs at the top to switch between different rating agencies.</li>
+                </ol>
+                <p>For CDP scores, you can also specify a year to retrieve historical data.</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/esg_scores.js') }}"></script>
+<script>
+    const eventSource = new EventSource('/esg_scores/events');
+    eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'score_update') {
+            const scoreElement = document.querySelector(`.score-value[data-source="${data.source}"]`);
+            if (scoreElement) {
+                scoreElement.textContent = data.value;
+            }
+        }
+    };
+</script>
+{% endblock %}

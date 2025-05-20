@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}{{ publication.title }} - ESG News Portal{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('core.index') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('core.publications') }}">Publications</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ publication.title }}</li>
+        </ol>
+    </nav>
+    
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                {% if publication.image_url %}
+                <img src="{{ publication.image_url }}" class="card-img-top" alt="{{ publication.title }}" style="max-height: 400px; object-fit: cover;">
+                {% endif %}
+                
+                <div class="card-body">
+                    <h1 class="card-title h2 mb-3">{{ publication.title }}</h1>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            {% if publication.source %}
+                            <span class="badge bg-primary me-2">{{ publication.source }}</span>
+                            {% endif %}
+                            {% if publication.published %}
+                            <span class="text-muted">
+                                <i class="far fa-calendar-alt me-1"></i>{{ publication.published.strftime('%b %d, %Y') }}
+                            </span>
+                            {% elif publication.published_date %}
+                            <span class="text-muted">
+                                <i class="far fa-calendar-alt me-1"></i>{{ publication.published_date.strftime('%b %d, %Y') }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            {% if current_user.is_authenticated %}
+                            <button class="btn btn-sm btn-outline-danger like-btn" data-type="publication" data-id="{{ publication.id }}">
+                                <i class="far fa-heart me-1"></i><span class="like-text">Like</span>
+                                <span class="like-count badge bg-light text-dark ms-1">0</span>
+                            </button>
+                            {% endif %}
+                            <a href="https://twitter.com/intent/tweet?text={{ publication.title|urlencode }}&url={{ request.url|urlencode }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fab fa-twitter me-1"></i>Share
+                            </a>
+                            <a href="{{ publication.link }}" target="_blank" class="btn btn-sm btn-success">
+                                <i class="fas fa-external-link-alt me-1"></i>Read Publication
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Publication Content -->
+                    <div class="card-text mb-4">
+                        <p class="lead">{{ publication.summary }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="sticky-top" style="top: 100px; z-index: 1000;">
+                <!-- Publication Details -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header" style="background-color: var(--primary-600); color: white;">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Publication Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <!-- Source -->
+                            {% if publication.source %}
+                            <li class="list-group-item d-flex">
+                                <div class="me-3" style="color: var(--primary-600);">
+                                    <i class="fas fa-globe fa-fw"></i>
+                                </div>
+                                <div>
+                                    <strong>Source:</strong><br>
+                                    {{ publication.source }}
+                                </div>
+                            </li>
+                            {% endif %}
+                            
+                            <!-- Date -->
+                            {% if publication.published %}
+                            <li class="list-group-item d-flex">
+                                <div class="me-3" style="color: var(--primary-600);">
+                                    <i class="fas fa-calendar-alt fa-fw"></i>
+                                </div>
+                                <div>
+                                    <strong>Published:</strong><br>
+                                    {{ publication.published.strftime('%b %d, %Y') }}
+                                </div>
+                            </li>
+                            {% elif publication.published_date %}
+                            <li class="list-group-item d-flex">
+                                <div class="me-3" style="color: var(--primary-600);">
+                                    <i class="fas fa-calendar-alt fa-fw"></i>
+                                </div>
+                                <div>
+                                    <strong>Published:</strong><br>
+                                    {{ publication.published_date.strftime('%b %d, %Y') }}
+                                </div>
+                            </li>
+                            {% endif %}
+                            
+                            <!-- Link -->
+                            <li class="list-group-item d-flex">
+                                <div class="me-3" style="color: var(--primary-600);">
+                                    <i class="fas fa-link fa-fw"></i>
+                                </div>
+                                <div>
+                                    <strong>Link:</strong><br>
+                                    <a href="{{ publication.link }}" target="_blank" style="color: var(--primary-600);">View original publication</a>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Share Card -->
+                <div class="card shadow-sm">
+                    <div class="card-header" style="background-color: var(--primary-600); color: white;">
+                        <h5 class="mb-0"><i class="fas fa-share-alt me-2"></i>Share This Publication</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-around">
+                            <a href="https://twitter.com/intent/tweet?text={{ publication.title|urlencode }}&url={{ request.url|urlencode }}" target="_blank" class="btn btn-outline-primary">
+                                <i class="fab fa-twitter"></i>
+                            </a>
+                            <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.url|urlencode }}" target="_blank" class="btn btn-outline-primary">
+                                <i class="fab fa-linkedin-in"></i>
+                            </a>
+                            <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url|urlencode }}" target="_blank" class="btn btn-outline-primary">
+                                <i class="fab fa-facebook-f"></i>
+                            </a>
+                            <a href="mailto:?subject={{ publication.title|urlencode }}&body={{ request.url|urlencode }}" class="btn btn-outline-primary">
+                                <i class="fas fa-envelope"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<!-- At the end of the body -->
+<script src="{{ url_for('static', filename='js/likes.js') }}"></script>
+{% endblock %}
+{% endblock %} 

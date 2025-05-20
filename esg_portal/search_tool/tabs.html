@@ -1,0 +1,220 @@
+{% extends "layout.html" %}
+
+{% block title %}ESG Score Search{% endblock %}
+
+{% block content %}
+<h1>ESG Score Search Engine</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <ul>
+      {% for category, message in messages %}
+        <li class="flash {{ category }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+<div class="tabs">
+    <a href="{{ url_for('esg_score_search', tab='All') }}" class="tablinks {% if tab == 'All' %}active{% endif %}" aria-label="View all sources">ALL</a>
+    <a href="{{ url_for('esg_score_search', tab='SNP') }}" class="tablinks {% if tab == 'SNP' %}active{% endif %}" aria-label="View S&P source">S&P</a>
+    <a href="{{ url_for('esg_score_search', tab='Sustainalytics') }}" class="tablinks {% if tab == 'Sustainalytics' %}active{% endif %}" aria-label="View Sustainalytics source">Sustainalytics</a>
+    <a href="{{ url_for('esg_score_search', tab='MSCI') }}" class="tablinks {% if tab == 'MSCI' %}active{% endif %}" aria-label="View MSCI source">MSCI</a>
+    <a href="{{ url_for('esg_score_search', tab='LSEG') }}" class="tablinks {% if tab == 'LSEG' %}active{% endif %}" aria-label="View LSEG source">LSEG</a>
+    <a href="{{ url_for('esg_score_search', tab='ISS') }}" class="tablinks {% if tab == 'ISS' %}active{% endif %}" aria-label="View ISS source">ISS</a>
+    <a href="{{ url_for('esg_score_search', tab='CDP') }}" class="tablinks {% if tab == 'CDP' %}active{% endif %}" aria-label="View CDP source">CDP</a>
+</div>
+
+<!-- Form -->
+<form method="POST" action="{{ url_for('esg_score_search', tab=tab) }}">
+    <label for="company_name">Enter Company Name:</label>
+    <input type="text" id="company_name" name="company_name" value="{{ company_name or '' }}" required>
+
+    {% if tab == "CDP" %}
+    <label for="year">Enter Year:</label>
+    <input type="number" id="year" name="year" value="{{ request.form.get('year', '') or '' }}" required>
+    {% endif %}
+
+    <button type="submit">Search</button>
+</form>
+
+{% if tab == "All" and company_name %}
+<h2>ESG Scores for {{ company_name }}</h2>
+
+<table class="styled-table">
+    <thead>
+        <tr>
+            <th>Source</th>
+            <th>Score</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for source, score in scores.items() %}
+        <tr class="{{ 'high' if score|int >= 75 else 'medium' if score|int >= 50 else 'low' }}">
+            <td>{{ source }}</td>
+            <td>{{ score }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% if tab == "SNP" and company_name %}
+<h2>S&P Details for {{ company_name }}</h2>
+{% if details.error %}
+<p style="color: red;">{{ details.error }}</p>
+{% else %}
+<table class="styled-table">
+    <thead>
+        <tr>
+            <th>Attribute</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in details.items() %}
+        <tr>
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endif %}
+
+{% if tab == "Sustainalytics" and company_name %}
+<h2>Sustainalytics Details for {{ company_name }}</h2>
+{% if details.error %}
+<p style="color: red;">{{ details.error }}</p>
+{% else %}
+<table class="styled-table">
+    <thead>
+        <tr>
+            <th>Attribute</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in details.items() %}
+        <tr>
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endif %}
+
+{% if tab == "MSCI" and company_name %}
+<h2>MSCI Details for {{ company_name }}</h2>
+{% if details.error %}
+<p style="color: red;">{{ details.error }}</p>
+{% else %}
+<table class="styled-table">
+    <thead>
+        <tr>
+            <th>Attribute</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in details.items() %}
+        <tr>
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endif %}
+
+{% if tab == "LSEG" and company_name %}
+<h2>LSEG Details for {{ company_name }}</h2>
+{% if details.error %}
+<p style="color: red;">{{ details.error }}</p>
+{% else %}
+<table class="styled-table">
+    <thead>
+        <tr>
+            <th>Attribute</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in details.items() %}
+        <tr>
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endif %}
+
+{% if tab == "ISS" and company_name %}
+<h2>ISS Details for {{ company_name }}</h2>
+{% if details.error %}
+<p style="color: red;">{{ details.error }}</p>
+{% else %}
+<table class="styled-table">
+    <thead>
+        <tr>
+            <th>Attribute</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for key, value in details.items() %}
+        <tr>
+            <td>{{ key }}</td>
+            <td>{{ value }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+{% endif %}
+
+{% if tab == "CDP" and company_name %}
+<h2>CDP Details for {{ company_name }}</h2>
+{% if details.error %}
+<p style="color: red;">{{ details.error }}</p>
+{% else %}
+<table class="styled-table">
+    <thead>
+        <tr>
+            <th>Company Name</th>
+            <th>Response Name</th>
+            <th>Project Year</th>
+            <th>Response Status</th>
+            <th>Response Score Band</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if details %}
+            {% for entry in details %}
+            <tr>
+                <td>{{entry.get('Company Name','N/A')}}</td>
+                <td>{{ entry.get('Response Name', 'N/A') }}</td>
+                <td>{{ entry.get('Project Year', 'N/A') }}</td>
+                <td>{{ entry.get('Response Status', 'N/A') }}</td>
+                <td>{{ entry.get('Response Score Band', 'N/A') }}</td>
+            </tr>
+            {% endfor %}
+        {% else %}
+        <tr>
+            <td colspan="6" style="text-align: center;">No CDP responses available for {{ company_name }}</td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endif %}
+{% endif %}
+
+
+{% endblock %}

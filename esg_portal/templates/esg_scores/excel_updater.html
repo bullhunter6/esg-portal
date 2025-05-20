@@ -1,0 +1,1215 @@
+{% extends "base.html" %}
+
+{% block title %}ESG Score Excel Updater - ESG Portal{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/esg_scores.css') }}">
+<style>
+    /* Back button styling */
+    .back-btn {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        z-index: 10;
+        color: var(--neutral-700);
+        transition: all var(--transition-normal);
+        border-radius: var(--border-radius-sm);
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .back-btn:hover {
+        background-color: var(--neutral-100);
+        color: var(--primary-700);
+        text-decoration: none;
+        transform: translateX(-3px);
+    }
+    
+    .back-btn i {
+        margin-right: 0.5rem;
+    }
+    
+    .app-container {
+        position: relative;
+        padding-top: 3.5rem;  /* Make space for the back button */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="app-container">
+    <a href="{{ url_for('esg_scores.index') }}" class="back-btn">
+        <i class="fas fa-arrow-left"></i>Back to ESG Scores
+    </a>
+
+    <h1 class="page-title">ESG Score Excel Updater</h1>
+    <p class="page-description">
+        Upload an Excel file with company names to fetch and update their ESG scores from multiple sources.
+    </p>
+    
+    <!-- Step Indicator -->
+    <div class="steps-container mb-5">
+        <div id="step1" class="step">
+            <div class="step-number">1</div>
+            <div class="step-title">Upload File</div>
+        </div>
+        <div id="step2" class="step">
+            <div class="step-number">2</div>
+            <div class="step-title">Processing</div>
+        </div>
+        <div id="step3" class="step">
+            <div class="step-number">3</div>
+            <div class="step-title">Results</div>
+        </div>
+    </div>
+    
+    <!-- Step 1: Upload -->
+    <div id="upload-step" class="step-view active">
+        <div class="d-flex flex-column gap-4">
+            <!-- Info Card -->
+            <div class="card">
+                <div class="card-header" style="background-color: var(--info); color: white;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    How It Works
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li class="mb-2">
+                            <strong>Prepare Your Excel File</strong>: Create an Excel file with company names in the first column. You can also include source-specific names in additional columns.
+                        </li>
+                        <li class="mb-2">
+                            <strong>Upload Your File</strong>: Use the upload form below to upload your Excel file.
+                        </li>
+                        <li class="mb-2">
+                            <strong>Processing</strong>: The system will process each company, fetching ESG scores from multiple sources.
+                        </li>
+                        <li class="mb-2">
+                            <strong>Download Results</strong>: Once processing is complete, you can download the updated Excel file with ESG scores.
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Upload Form -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-upload me-2"></i>
+                    Upload Excel File
+                </div>
+                <div class="card-body">
+                    <form id="upload-form" action="{{ url_for('esg_scores.excel_updater') }}" method="post" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        <label for="file-upload" class="upload-zone">
+                            <div class="upload-icon">
+                                <i class="fas fa-file-excel"></i>
+                            </div>
+                            <div class="upload-text">Drag & drop your Excel file here</div>
+                            <div class="upload-subtext">or click to browse files</div>
+                            {{ form.file(id="file-upload", class="file-input") }}
+                        </label>
+                        <div id="file-preview" class="d-none mb-4">
+                            <div class="file-preview">
+                                <i class="fas fa-file-excel file-preview-icon"></i>
+                                <div class="file-preview-info">
+                                    <div id="file-name" class="file-name"></div>
+                                    <div id="file-size" class="file-size"></div>
+                                </div>
+                                <button type="button" id="remove-file" class="btn btn-sm btn-danger ms-auto">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" id="upload-btn" class="btn btn-primary" disabled>
+                            <i class="fas fa-upload me-2"></i>
+                            Upload & Process
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Previous Uploads -->
+            {% if user_uploads %}
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-history me-2"></i>
+                    Your Previous Uploads
+                </div>
+                <div class="card-body">
+                    <p>You have {{ user_uploads|length }} previous uploads. View your complete upload history with advanced options:</p>
+                    <a href="{{ url_for('esg_scores.file_uploads') }}" class="btn btn-primary">
+                        <i class="fas fa-list me-2"></i>View All Uploads
+                    </a>
+                    
+                    <div class="table-responsive mt-3">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Status</th>
+                                    <th>Uploaded</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for upload in user_uploads %}
+                                <tr>
+                                    <td>{{ upload.original_filename }}</td>
+                                    <td>
+                                        {% if upload.status == 'complete' %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% elif upload.status == 'error' %}
+                                        <span class="badge bg-danger">Error</span>
+                                        {% elif upload.status == 'processing' %}
+                                        <span class="badge bg-warning text-dark">Processing</span>
+                                        {% else %}
+                                        <span class="badge bg-info">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ upload.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        {% if upload.status == 'complete' %}
+                                        <a href="{{ url_for('esg_scores.download_file', task_id=upload.task_id) }}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-download me-1"></i> Download
+                                        </a>
+                                        <a href="{{ url_for('esg_scores.view_results', task_id=upload.task_id) }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-chart-bar me-1"></i> View Results
+                                        </a>
+                                        {% elif upload.status in ['pending', 'processing'] %}
+                                        <a href="{{ url_for('esg_scores.task_status', task_id=upload.task_id) }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye me-1"></i> View Progress
+                                        </a>
+                                        {% elif upload.status == 'error' %}
+                                        <button class="btn btn-sm btn-secondary view-error" data-error="{{ upload.error_message|e }}">
+                                            <i class="fas fa-exclamation-circle me-1"></i> View Error
+                                        </button>
+                                        {% endif %}
+                                        
+                                        {% if upload.status != 'processing' and upload.status != 'pending' %}
+                                        <button class="btn btn-sm btn-danger delete-upload" data-upload-id="{{ upload.id }}">
+                                            <i class="fas fa-trash me-1"></i> Delete
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Step 2: Processing -->
+    <div id="processing-step" class="step-view">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-spinner fa-spin me-2"></i>
+                Processing Status
+            </div>
+            <div class="card-body">
+                <div class="status-bar p-3">
+                    <div class="d-flex align-items-start">
+                        <div class="status-icon me-3">
+                            <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                        </div>
+                        <div class="status-content flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center">
+                                    <span class="fw-semibold me-2">Status:</span>
+                                    <span id="task-status">Processing</span>
+                                </div>
+                                <div>
+                                    <span class="d-none" id="task-id"></span>
+                                </div>
+                            </div>
+                            <div class="progress mb-2">
+                                <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <div id="status-message" class="text-muted">Preparing to process file...</div>
+                            <div id="current-company" class="mt-2 d-none"></div>
+                            <div id="processed-count" class="mt-1 d-none"></div>
+                            <div id="error-message" class="alert alert-danger mt-3 d-none"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 text-center">
+                        <button id="cancel-btn" class="btn btn-outline">
+                            <i class="fas fa-times me-2"></i>
+                            Cancel Processing
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Step 3: Results -->
+    <div id="results-step" class="step-view">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="card-title mb-4">
+                    <i class="fas fa-chart-bar text-primary me-2"></i>
+                    Updated ESG Scores
+                </h3>
+                
+                <p class="text-muted mb-4">
+                    Below are the updated ESG scores for the companies in your Excel file.
+                </p>
+                
+                <div id="download-area" class="d-flex gap-3">
+                    <a id="download-result-btn" href="#" class="btn btn-success download-file-btn" download>
+                        <i class="fas fa-download me-2"></i>
+                        Download Updated File
+                    </a>
+                    
+                    <button id="back-to-upload-btn" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Back to Upload
+                    </button>
+                </div>
+                
+                <div class="table-responsive mt-4">
+                    <table class="table table-hover">
+                        <thead id="results-table-header">
+                            <tr>
+                                <th>Company Name</th>
+                                <th>S&P</th>
+                                <th>Sustainalytics</th>
+                                <th>ISS</th>
+                                <th>LSEG</th>
+                                <th>MSCI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-table-body">
+                            <tr>
+                                <td colspan="6" class="text-center py-4">No results available</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="errorModalLabel">Error Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="errorDetails" class="bg-light p-3 rounded"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this file upload record?</p>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelDelete" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // DOM elements
+        const uploadForm = document.getElementById('upload-form');
+        const fileInput = document.getElementById('file-upload');  
+        const uploadZone = document.querySelector('.upload-zone');  
+        const fileNameElement = document.getElementById('file-name');
+        const fileSizeElement = document.getElementById('file-size');
+        const filePreview = document.getElementById('file-preview');
+        const removeFileBtn = document.getElementById('remove-file');
+        const uploadBtn = document.getElementById('upload-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const taskStatus = document.getElementById('task-status');
+        const statusMessage = document.getElementById('status-message');
+        const currentCompany = document.getElementById('current-company');
+        const processedCount = document.getElementById('processed-count');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const backToUploadBtn = document.getElementById('back-to-upload-btn');
+        const downloadResultBtn = document.getElementById('download-result-btn');
+        const resultsTableBody = document.getElementById('results-table-body');
+        const resultsTableHeader = document.getElementById('results-table-header');
+        const errorMessage = document.getElementById('error-message');
+        const taskIdElement = document.getElementById('task-id');
+        
+        // Step views
+        const uploadStep = document.getElementById('upload-step');
+        const processingStep = document.getElementById('processing-step');
+        const resultsStep = document.getElementById('results-step');
+        
+        // Step indicators
+        const stepIndicators = document.querySelectorAll('.step');
+        
+        // Task variables
+        let taskId = null;
+        let taskEventSource = null;
+        
+        // Function to format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Function to switch to a specific step
+        function goToStep(stepNumber) {
+            console.log(`Going to step ${stepNumber}`);
+            
+            // Hide all steps
+            document.querySelectorAll('.step-view').forEach(step => {
+                step.classList.remove('active');
+            });
+            
+            // Show the selected step
+            if (stepNumber === 1) {
+                uploadStep.classList.add('active');
+                console.log('Showing upload step');
+            } else if (stepNumber === 2) {
+                processingStep.classList.add('active');
+                console.log('Showing processing step');
+            } else if (stepNumber === 3) {
+                resultsStep.classList.add('active');
+                console.log('Showing results step');
+            }
+            
+            // Update the step indicators
+            document.querySelectorAll('.step').forEach((indicator, index) => {
+                if (index + 1 < stepNumber) {
+                    indicator.classList.add('completed');
+                    indicator.classList.remove('active');
+                } else if (index + 1 === stepNumber) {
+                    indicator.classList.add('active');
+                    indicator.classList.remove('completed');
+                } else {
+                    indicator.classList.remove('active', 'completed');
+                }
+            });
+        }
+        
+        // Handle file selection
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
+                    const file = this.files[0];
+                    
+                    // Check file type
+                    const validExtensions = ['xlsx', 'xls', 'csv'];
+                    const fileExtension = file.name.split('.').pop().toLowerCase();
+                    
+                    if (!validExtensions.includes(fileExtension)) {
+                        alert('Please select a valid Excel or CSV file.');
+                        this.value = '';
+                        return;
+                    }
+                    
+                    // Display file info
+                    fileNameElement.textContent = file.name;
+                    if (fileSizeElement) {
+                        fileSizeElement.textContent = formatFileSize(file.size);
+                    }
+                    
+                    // Show file info and enable upload button
+                    if (filePreview) {
+                        filePreview.classList.remove('d-none');
+                    }
+                    if (uploadBtn) {
+                        uploadBtn.disabled = false;
+                    }
+                }
+            });
+        }
+        
+        // Handle remove file button
+        if (removeFileBtn) {
+            removeFileBtn.addEventListener('click', function() {
+                if (fileInput) {
+                    fileInput.value = '';
+                }
+                if (filePreview) {
+                    filePreview.classList.add('d-none');
+                }
+                if (uploadBtn) {
+                    uploadBtn.disabled = true;
+                }
+            });
+        }
+        
+        // Handle new upload button (from results screen)
+        if (backToUploadBtn) {
+            backToUploadBtn.addEventListener('click', function() {
+                goToStep(1);
+                // Reset the form
+                if (uploadForm) {
+                    uploadForm.reset();
+                }
+                // Reset file preview
+                if (filePreview) {
+                    filePreview.classList.add('d-none');
+                }
+                // Clear task ID
+                taskId = null;
+                // Close any open event source
+                if (taskEventSource) {
+                    taskEventSource.close();
+                    taskEventSource = null;
+                }
+            });
+        }
+        
+        // Drag and drop functionality
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        if (uploadZone) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadZone.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadZone.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadZone.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                uploadZone.classList.add('highlight');
+            }
+            
+            function unhighlight() {
+                uploadZone.classList.remove('highlight');
+            }
+            
+            uploadZone.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length) {
+                    fileInput.files = files;
+                    fileInput.dispatchEvent(new Event('change'));
+                }
+            }
+        }
+        
+        // UPDATED: Function to populate results table
+        function populateResultsTable(results) {
+            console.log('populateResultsTable called with:', results);
+            
+            if (!resultsTableBody) {
+                console.error('resultsTableBody element not found');
+                return;
+            }
+            
+            // Clear existing rows
+            resultsTableBody.innerHTML = '';
+            
+            // Check if results is directly an array (old format)
+            if (Array.isArray(results)) {
+                console.log('Results is an array, converting to expected format');
+                results = {
+                    summary_headers: ["Company Name", "S&P", "Sustainalytics", "ISS", "LSEG", "MSCI"],
+                    summary_rows: results
+                };
+            }
+            
+            // Check if results is the summary data format
+            if (results && results.summary_headers && Array.isArray(results.summary_headers) && 
+                results.summary_rows && Array.isArray(results.summary_rows)) {
+                
+                console.log('Using summary data format');
+                
+                // Update the table headers based on the summary_headers
+                if (resultsTableHeader) {
+                    const headerRow = resultsTableHeader.querySelector('tr');
+                    if (headerRow && results.summary_headers.length > 0) {
+                        headerRow.innerHTML = '';
+                        results.summary_headers.forEach(header => {
+                            const th = document.createElement('th');
+                            th.textContent = header || '';
+                            headerRow.appendChild(th);
+                        });
+                        console.log('Updated table headers');
+                    }
+                }
+                
+                // Check if we have rows to display
+                if (!results.summary_rows || results.summary_rows.length === 0) {
+                    resultsTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="${results.summary_headers.length || 6}" class="text-center py-4">No results available</td>
+                        </tr>
+                    `;
+                    console.log('No results to display');
+                    return;
+                }
+                
+                console.log(`Adding ${results.summary_rows.length} rows to the table`);
+                
+                // Add all rows
+                results.summary_rows.forEach((row, rowIndex) => {
+                    const tr = document.createElement('tr');
+                    
+                    // Add all cells from the row
+                    if (Array.isArray(row)) {
+                        row.forEach((cellValue, cellIndex) => {
+                            const cell = document.createElement('td');
+                            // Handle null, undefined or empty values
+                            cell.textContent = (cellValue !== null && cellValue !== undefined && cellValue !== '') 
+                                ? cellValue 
+                                : '-';
+                            
+                            // Make the company name bold (first column)
+                            if (cellIndex === 0) {
+                                cell.className = 'fw-semibold';
+                            }
+                            
+                            tr.appendChild(cell);
+                        });
+                    } else if (typeof row === 'object') {
+                        // Handle case where row is an object instead of array
+                        results.summary_headers.forEach((header, index) => {
+                            const cell = document.createElement('td');
+                            const cellValue = row[header] || row[header.toLowerCase()];
+                            
+                            cell.textContent = (cellValue !== null && cellValue !== undefined && cellValue !== '') 
+                                ? cellValue 
+                                : '-';
+                            
+                            // Make the company name bold (first column)
+                            if (index === 0) {
+                                cell.className = 'fw-semibold';
+                            }
+                            
+                            tr.appendChild(cell);
+                        });
+                    }
+                    
+                    resultsTableBody.appendChild(tr);
+                });
+                
+                console.log('Finished populating table');
+            } else {
+                // If the data format is not as expected, display an error message
+                console.error('Invalid results format:', results);
+                resultsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-4">Error: Invalid data format</td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // UPDATED: Function to connect to SSE stream for a specific task
+        function connectToTaskStream(taskId) {
+            if (taskEventSource) {
+                taskEventSource.close();
+            }
+            
+            // Connect to SSE stream
+            taskEventSource = new EventSource(`/esg-scores/sse-stream/${taskId}`);
+            
+            taskEventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log("SSE update:", data);
+                    
+                    // Update task status
+                    if (data.status) {
+                        if (taskStatus) {
+                            taskStatus.textContent = data.status;
+                        }
+                        
+                        if (data.status === 'complete') {
+                            // Stop the animation on status icon
+                            const statusIcon = document.querySelector('.status-icon i');
+                            if (statusIcon) {
+                                statusIcon.classList.remove('fa-spin');
+                                statusIcon.classList.remove('fa-spinner');
+                                statusIcon.classList.add('fa-check-circle');
+                                statusIcon.classList.add('text-success');
+                            }
+                            
+                            // Set progress to 100%
+                            if (progressBar) {
+                                progressBar.style.width = '100%';
+                                progressBar.setAttribute('aria-valuenow', 100);
+                            }
+                            
+                            // Update status message
+                            if (statusMessage) {
+                                statusMessage.textContent = 'Processing complete!';
+                            }
+                            
+                            // Clear company and processed count displays
+                            if (currentCompany) {
+                                currentCompany.classList.add('d-none');
+                            }
+                            if (processedCount) {
+                                processedCount.classList.add('d-none');
+                            }
+                            
+                            // Set download link if available
+                            if (downloadResultBtn && data.download_filename) {
+                                downloadResultBtn.href = `/esg-scores/download/${taskId}`;
+                            }
+                            
+                            // Close the SSE connection
+                            if (taskEventSource) {
+                                taskEventSource.close();
+                                taskEventSource = null;
+                            }
+                            
+                            // Prepare results data for display
+                            let resultsData;
+                            
+                            // Check all possible data formats
+                            if (data.results) {
+                                if (data.results.summary_headers && data.results.summary_rows) {
+                                    // Already in the right format
+                                    resultsData = data.results;
+                                } else if (Array.isArray(data.results)) {
+                                    // Convert array to expected format
+                                    resultsData = {
+                                        summary_headers: ["Company Name", "S&P", "Sustainalytics", "ISS", "LSEG", "MSCI"],
+                                        summary_rows: data.results
+                                    };
+                                }
+                            } else if (data.summary_headers && data.summary_rows) {
+                                // Data is at the top level
+                                resultsData = {
+                                    summary_headers: data.summary_headers,
+                                    summary_rows: data.summary_rows
+                                };
+                            }
+                            
+                            console.log("Prepared results data:", resultsData);
+                            
+                            // Wait a moment then go to results step
+                            setTimeout(() => {
+                                goToStep(3);
+                                if (resultsData) {
+                                    populateResultsTable(resultsData);
+                                } else {
+                                    console.error("No valid results data found");
+                                    if (resultsTableBody) {
+                                        resultsTableBody.innerHTML = `
+                                            <tr>
+                                                <td colspan="6" class="text-center py-4">No results data available</td>
+                                            </tr>
+                                        `;
+                                    }
+                                }
+                            }, 1000);
+                            
+                        } else if (data.status === 'error') {
+                            // Show error status
+                            const statusIcon = document.querySelector('.status-icon i');
+                            if (statusIcon) {
+                                statusIcon.classList.remove('fa-spin');
+                                statusIcon.classList.remove('fa-spinner');
+                                statusIcon.classList.add('fa-exclamation-circle');
+                                statusIcon.classList.add('text-danger');
+                            }
+                            
+                            // Show error message if available
+                            if (errorMessage && data.message) {
+                                errorMessage.textContent = data.message;
+                                errorMessage.classList.remove('d-none');
+                            }
+                            
+                            // Close the SSE connection
+                            if (taskEventSource) {
+                                taskEventSource.close();
+                                taskEventSource = null;
+                            }
+                        }
+                    }
+                    
+                    // Update progress bar
+                    if (progressBar && data.progress !== undefined) {
+                        progressBar.style.width = `${data.progress}%`;
+                        progressBar.setAttribute('aria-valuenow', data.progress);
+                    }
+                    
+                    // Update message
+                    if (statusMessage && data.message) {
+                        statusMessage.textContent = data.message;
+                    }
+                    
+                    // Update current company
+                    if (currentCompany && data.current_company) {
+                        currentCompany.textContent = `Processing: ${data.current_company}`;
+                        currentCompany.classList.remove('d-none');
+                    }
+                    
+                    // Update processed count
+                    if (processedCount && data.processed_companies !== undefined && data.total_companies !== undefined) {
+                        processedCount.textContent = `Processed ${data.processed_companies} of ${data.total_companies} companies`;
+                        processedCount.classList.remove('d-none');
+                    }
+                } catch (error) {
+                    console.error("Error processing SSE message:", error);
+                }
+            };
+            
+            // Handle connection open
+            taskEventSource.onopen = function() {
+                console.log('SSE connection established');
+            };
+            
+            // Handle errors
+            taskEventSource.onerror = function(error) {
+                console.error('SSE connection error:', error);
+                
+                // Try to reconnect after a delay
+                setTimeout(function() {
+                    // Only reconnect if we're still processing
+                    if (taskStatus && 
+                        taskStatus.textContent.toLowerCase() !== 'complete' && 
+                        taskStatus.textContent.toLowerCase() !== 'error' && 
+                        taskStatus.textContent.toLowerCase() !== 'cancelled') {
+                        connectToTaskStream(taskId);
+                    }
+                }, 5000);
+            };
+            
+            return taskEventSource;
+        }
+        
+        // UPDATED: Function to check task status
+        function checkTaskStatus(id) {
+            taskId = id;
+            
+            fetch(`/esg-scores/task-status-api/${id}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Task status API response:', data);
+                
+                if (data.status === 'complete') {
+                    console.log('Task is complete, preparing to show results');
+                    
+                    // Debug the data we received
+                    console.log('Complete data from server:', data);
+                    console.log('Summary headers:', data.summary_headers);
+                    console.log('Summary rows:', data.summary_rows);
+                    
+                    // Prepare results data for display
+                    let resultsData;
+                    
+                    // Check all possible data formats
+                    if (data.results) {
+                        if (data.results.summary_headers && data.results.summary_rows) {
+                            // Already in the right format
+                            resultsData = data.results;
+                        } else if (Array.isArray(data.results)) {
+                            // Convert array to expected format
+                            resultsData = {
+                                summary_headers: ["Company Name", "S&P", "Sustainalytics", "ISS", "LSEG", "MSCI"],
+                                summary_rows: data.results
+                            };
+                        }
+                    } else if (data.summary_headers && data.summary_rows) {
+                        // Data is at the top level
+                        resultsData = {
+                            summary_headers: data.summary_headers,
+                            summary_rows: data.summary_rows
+                        };
+                    } else {
+                        // Fallback to default format
+                        resultsData = {
+                            summary_headers: ["Company Name", "S&P", "Sustainalytics", "ISS", "LSEG", "MSCI"],
+                            summary_rows: []
+                        };
+                    }
+                    
+                    console.log('Prepared results object:', resultsData);
+                    
+                    // Set download link
+                    if (downloadResultBtn) {
+                        downloadResultBtn.href = `/esg-scores/download/${taskId}`;
+                        downloadResultBtn.classList.add('download-file-btn');
+                        console.log('Set download link to:', downloadResultBtn.href);
+                    }
+                    
+                    // Populate the results table
+                    populateResultsTable(resultsData);
+                    
+                    // Finally, go to step 3
+                    goToStep(3);
+                    console.log('Moved to step 3');
+                } else if (data.status === 'processing' || data.status === 'pending') {
+                    // Task is still processing, show processing view
+                    goToStep(2);
+                    
+                    // Store task ID and connect to SSE stream
+                    if (taskIdElement) {
+                        taskIdElement.textContent = taskId;
+                    }
+                    connectToTaskStream(taskId);
+                    
+                    // Update UI with current progress
+                    if (progressBar && data.progress !== undefined) {
+                        progressBar.style.width = `${data.progress}%`;
+                        progressBar.setAttribute('aria-valuenow', data.progress);
+                    }
+                    
+                    if (statusMessage && data.message) {
+                        statusMessage.textContent = data.message;
+                    }
+                } else {
+                    // Task has error or unknown status, stay on upload view
+                    goToStep(1);
+                    
+                    if (data.error) {
+                        alert('Task error: ' + data.error);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching task status:', error);
+                goToStep(1);
+            });
+        }
+        
+        // Handle form submission
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Validate form
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                    alert('Please select a file to upload');
+                    return;
+                }
+                
+                // Show processing view
+                goToStep(2);
+                
+                // Reset progress bar and status
+                if (progressBar) {
+                    progressBar.style.width = '0%';
+                    progressBar.setAttribute('aria-valuenow', 0);
+                }
+                if (taskStatus) {
+                    taskStatus.textContent = 'Uploading';
+                }
+                if (statusMessage) {
+                    statusMessage.textContent = 'Uploading your file...';
+                }
+                if (currentCompany) {
+                    currentCompany.classList.add('d-none');
+                }
+                if (processedCount) {
+                    processedCount.classList.add('d-none');
+                }
+                if (errorMessage) {
+                    errorMessage.classList.add('d-none');
+                }
+                
+                const statusIcon = document.querySelector('.status-icon i');
+                if (statusIcon) {
+                    statusIcon.className = 'fas fa-spinner fa-spin fa-2x text-primary';
+                }
+                
+                // Submit form using AJAX
+                const formData = new FormData(uploadForm);
+                
+                fetch(uploadForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Upload response:', data);
+                    
+                    if (data.success || data.status === 'success' || data.task_id) {
+                        // Store task ID
+                        taskId = data.task_id;
+                        console.log('Task ID received:', taskId);
+                        
+                        // Check task status
+                        checkTaskStatus(taskId);
+                    } else {
+                        // Show error
+                        goToStep(1);
+                        alert('Upload failed: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Upload error:', error);
+                    goToStep(1);
+                    alert('Upload failed: ' + error.message);
+                });
+            });
+        }
+        
+        // Handle cancel button
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to cancel the processing?')) {
+                    // Close the SSE connection
+                    if (taskEventSource) {
+                        taskEventSource.close();
+                        taskEventSource = null;
+                    }
+                    
+                    // Cancel the task on the server (if your API supports this)
+                    if (taskIdElement && taskIdElement.textContent) {
+                        const taskId = taskIdElement.textContent;
+                        fetch(`/esg-scores/cancel-task/${taskId}`, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Cancel response:', data);
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        });
+                    }
+                    
+                    // Go back to upload step
+                    goToStep(1);
+                }
+            });
+        }
+        
+        // Add a specific event handler for the download button
+        if (downloadResultBtn) {
+            downloadResultBtn.addEventListener('click', function(e) {
+                // If the href is just '#', prevent the default action
+                if (this.getAttribute('href') === '#') {
+                    e.preventDefault();
+                    alert('Download link is not available yet. Please wait for processing to complete.');
+                    return false;
+                }
+                
+                // Otherwise let the browser handle the download
+                return true;
+            });
+        }
+        
+        // Check if URL has task_id parameter to show task status
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlTaskId = urlParams.get('task_id');
+        
+        if (urlTaskId) {
+            // If we have a task ID in URL, use it
+            taskId = urlTaskId;
+            
+            // Fetch its status and show appropriate view
+            fetch(`/esg-scores/task-status-api/${taskId}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Task status API response:', data);
+                
+                if (data.status === 'complete') {
+                    console.log('Task is complete, preparing to show results');
+                    
+                    // Debug the data we received
+                    console.log('Complete data from server:', data);
+                    console.log('Summary headers:', data.summary_headers);
+                    console.log('Summary rows:', data.summary_rows);
+                    
+                    // Prepare results data for display
+                    let resultsData;
+                    
+                    // Check all possible data formats
+                    if (data.results) {
+                        if (data.results.summary_headers && data.results.summary_rows) {
+                            // Already in the right format
+                            resultsData = data.results;
+                        } else if (Array.isArray(data.results)) {
+                            // Convert array to expected format
+                            resultsData = {
+                                summary_headers: ["Company Name", "S&P", "Sustainalytics", "ISS", "LSEG", "MSCI"],
+                                summary_rows: data.results
+                            };
+                        }
+                    } else if (data.summary_headers && data.summary_rows) {
+                        // Data is at the top level
+                        resultsData = {
+                            summary_headers: data.summary_headers,
+                            summary_rows: data.summary_rows
+                        };
+                    } else {
+                        // Fallback to default format
+                        resultsData = {
+                            summary_headers: ["Company Name", "S&P", "Sustainalytics", "ISS", "LSEG", "MSCI"],
+                            summary_rows: []
+                        };
+                    }
+                    
+                    console.log('Prepared results object:', resultsData);
+                    
+                    // Set download link
+                    if (downloadResultBtn) {
+                        downloadResultBtn.href = `/esg-scores/download/${taskId}`;
+                        downloadResultBtn.classList.add('download-file-btn');
+                        console.log('Set download link to:', downloadResultBtn.href);
+                    }
+                    
+                    // Populate the results table
+                    populateResultsTable(resultsData);
+                    
+                    // Finally, go to step 3
+                    goToStep(3);
+                    console.log('Moved to step 3');
+                } else if (data.status === 'processing' || data.status === 'pending') {
+                    // Task is still processing, show processing view
+                    goToStep(2);
+                    
+                    // Store task ID and connect to SSE stream
+                    if (taskIdElement) {
+                        taskIdElement.textContent = taskId;
+                    }
+                    connectToTaskStream(taskId);
+                    
+                    // Update UI with current progress
+                    if (progressBar && data.progress !== undefined) {
+                        progressBar.style.width = `${data.progress}%`;
+                        progressBar.setAttribute('aria-valuenow', data.progress);
+                    }
+                    
+                    if (statusMessage && data.message) {
+                        statusMessage.textContent = data.message;
+                    }
+                } else {
+                    // Task has error or unknown status, stay on upload view
+                    goToStep(1);
+                    
+                    if (data.error) {
+                        alert('Task error: ' + data.error);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching task status:', error);
+                goToStep(1);
+            });
+        }
+        
+        // Handle delete upload button
+        const deleteUploadBtns = document.querySelectorAll('.delete-upload');
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        const confirmDeleteBtn = document.getElementById('confirmDelete');
+        const cancelDeleteBtn = document.getElementById('cancelDelete');
+        let currentUploadId = null;
+        
+        deleteUploadBtns.forEach(button => {
+            button.addEventListener('click', function() {
+                currentUploadId = this.getAttribute('data-upload-id');
+                deleteModal.show();
+            });
+        });
+        
+        // Handle cancel button click
+        cancelDeleteBtn.addEventListener('click', function() {
+            deleteModal.hide();
+            currentUploadId = null;
+        });
+        
+        // Handle confirm delete button click
+        confirmDeleteBtn.addEventListener('click', function() {
+            if (currentUploadId) {
+                // Hide the modal
+                deleteModal.hide();
+                
+                // Send the delete request
+                fetch(`/esg-scores/delete-upload/${currentUploadId}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Delete response:', data);
+                    
+                    if (data.success) {
+                        // Remove the upload from the list
+                        const uploadRow = document.querySelector(`.delete-upload[data-upload-id="${currentUploadId}"]`).closest('tr');
+                        uploadRow.remove();
+                    } else {
+                        alert('Error deleting upload: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting upload:', error);
+                    alert('Error deleting upload: ' + error.message);
+                });
+                
+                // Reset the current upload ID
+                currentUploadId = null;
+            }
+        });
+        
+        // Handle view error button
+        const viewErrorBtns = document.querySelectorAll('.view-error');
+        viewErrorBtns.forEach(button => {
+            button.addEventListener('click', function() {
+                const error = this.getAttribute('data-error');
+                const modal = document.getElementById('errorModal');
+                const errorDetails = document.getElementById('errorDetails');
+                
+                // Show the modal
+                modal.classList.add('show');
+                modal.style.display = 'block';
+                
+                // Set the error details
+                errorDetails.textContent = error;
+            });
+        });
+    });
+</script>
+{% endblock %}
