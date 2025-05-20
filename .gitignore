@@ -2,7 +2,6 @@
 __pycache__/
 env/
 ai-powered-esg-compliance/
-instance/
 migrations/
 esg_portal.egg-info/
 chroma_db_agthia_report/
