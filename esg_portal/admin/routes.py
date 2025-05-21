@@ -12,6 +12,7 @@ from sqlalchemy import desc, func
 from esg_portal.admin import bp
 from esg_portal import db, cache
 from esg_portal.models.user import User
+from esg_portal.models.file_upload import FileUpload
 from esg_portal.utils.logging_utils import user_logger, error_logger
 
 # Check if cache is available with Redis or use a no-op decorator
@@ -342,30 +343,34 @@ def create_user():
     
     return render_template('admin/create_user.html')
 
-@bp.route('/user/<int:id>/delete', methods=['POST'])
+@bp.route('/users/<int:user_id>/delete', methods=['POST'])
 @login_required
 @admin_required
-def delete_user(id):
-    """Delete user"""
+def delete_user(user_id):
+    if current_user.id == user_id:
+        flash('You cannot delete your own account.', 'danger')
+        return redirect(url_for('admin.users'))
+    
+    user = User.query.get_or_404(user_id)
+    
     try:
-        user = User.query.get_or_404(id)
+        # First, delete all file uploads associated with this user
+        file_uploads = FileUpload.query.filter_by(user_id=user_id).all()
+        for upload in file_uploads:
+            # Optionally: delete the actual files from storage
+            # if os.path.exists(upload.file_path):
+            #     os.remove(upload.file_path)
+            db.session.delete(upload)
         
-        # Prevent deleting yourself
-        if user.id == current_user.id:
-            flash('You cannot delete your own account.', 'danger')
-            return redirect(url_for('admin.users'))
-        
-        username = user.username
+        # Now delete the user
         db.session.delete(user)
         db.session.commit()
-        
-        flash(f'User {username} has been deleted.', 'success')
+        flash(f'User {user.username} has been deleted.', 'success')
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error deleting user: {str(e)}")
         flash(f'Error deleting user: {str(e)}', 'danger')
+        current_app.logger.error(f"Error deleting user {user_id}: {str(e)}")
     
-    # Always redirect to users page
     return redirect(url_for('admin.users'))
 
 @bp.route('/logs')
@@ -570,4 +575,4 @@ def download_logs():
             )
     
     flash('Log file not found.', 'danger')
-    return redirect(url_for('admin.logs', type=log_type)) 
+    return redirect(url_for('admin.logs', type=log_type))

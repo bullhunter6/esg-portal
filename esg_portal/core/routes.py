@@ -11,7 +11,7 @@ from esg_portal.models.article import Article  # Keep for type hints
 from esg_portal.models.event import Event  # Keep for type hints
 from esg_portal.models.publication import Publication  # Keep for type hints
 from esg_portal import db
-from esg_portal.utils.events import load_events_data, filter_events, search_events, convert_to_event_objects
+from esg_portal.utils.events import load_events_data, filter_events, search_events, get_event_by_id, get_upcoming_events
 from esg_portal.utils.publications import get_latest_publications, get_paginated_publications, get_publication_by_id, convert_to_publication_objects
 from esg_portal.utils.articles import get_latest_articles, get_articles_by_date, get_article_by_id, get_distinct_sources, convert_to_article_objects
 from esg_portal.utils.logging_utils import log_user_activity, log_error
@@ -29,9 +29,7 @@ def index():
     
     # Get upcoming events from CSV
     try:
-        events_df = load_events_data()
-        filtered_df = filter_events(events_df, 'upcoming')
-        upcoming_events = convert_to_event_objects(filtered_df.head(3))
+        upcoming_events = get_upcoming_events(3)
     except Exception as e:
         current_app.logger.error(f"Error loading events: {e}")
         upcoming_events = []
@@ -134,30 +132,27 @@ def events():
     search_term = request.args.get('search')
     
     try:
-        # Load events from CSV
-        events_df = load_events_data()
+        # Load events from database
+        all_events = load_events_data()
         
         # Apply filters
-        filtered_df = filter_events(events_df, filter_option)
+        filtered_events = filter_events(all_events, filter_option)
         
         # Apply search if provided
         if search_term:
-            filtered_df = search_events(filtered_df, search_term)
-        
-        # Convert to list of event-like objects
-        all_events = convert_to_event_objects(filtered_df)
+            filtered_events = search_events(filtered_events, search_term)
         
         # Apply ESG filter if provided
         if esg_filter:
-            all_events = [event for event in all_events if esg_filter.capitalize() in event.esg_categories]
+            filtered_events = [event for event in filtered_events if esg_filter.capitalize() in event.esg_categories]
         
         # Calculate total for pagination
-        total_events = len(all_events)
+        total_events = len(filtered_events)
         
         # Manual pagination
         start_idx = (page - 1) * per_page
         end_idx = start_idx + per_page
-        events_page = all_events[start_idx:end_idx]
+        events_page = filtered_events[start_idx:end_idx]
         
         # Create a pagination object for template compatibility
         class Pagination:
@@ -183,8 +178,8 @@ def events():
         
         # Count for filter badges
         current_date = datetime.now().date()
-        upcoming_count = len(events_df[events_df['start_date'].dt.date >= current_date])
-        past_count = len(events_df[events_df['start_date'].dt.date < current_date])
+        upcoming_count = len([e for e in all_events if e.start_date and e.start_date >= current_date])
+        past_count = len([e for e in all_events if e.start_date and e.start_date < current_date])
         
     except Exception as e:
         current_app.logger.error(f"Error processing events: {e}")
@@ -295,40 +290,17 @@ def event_detail(id):
             flash('Invalid event ID', 'warning')
             return redirect(url_for('core.events'))
             
-        # Get event from CSV by ID
-        events_df = load_events_data()
+        # Get event from database by ID
+        event = get_event_by_id(id)
         
-        # Log the available IDs for debugging
-        current_app.logger.info(f"Looking for event with ID: {id}")
-        current_app.logger.info(f"Available event IDs: {events_df['id'].tolist()}")
-        
-        # Try different approaches to find the event
-        # First, try exact match
-        event_row = events_df[events_df['id'].astype(str) == str(id)]
-        
-        # If not found, try case-insensitive match
-        if event_row.empty:
-            event_row = events_df[events_df['id'].astype(str).str.lower() == str(id).lower()]
-        
-        # If still not found, try partial match
-        if event_row.empty:
-            event_row = events_df[events_df['id'].astype(str).str.contains(str(id), case=False, na=False)]
-        
-        if event_row.empty:
+        if not event:
             current_app.logger.error(f"Event not found with ID: {id}")
             flash('Event not found', 'warning')
             return redirect(url_for('core.events'))
         
-        # If multiple matches found, use the first one
-        if len(event_row) > 1:
-            current_app.logger.warning(f"Multiple events found with ID: {id}, using the first one")
-            event_row = event_row.iloc[[0]]
-        
-        # Convert to event object
-        event = convert_to_event_objects(event_row)[0]
-        
     except Exception as e:
-        current_app.logger.error(f"Error loading event details: {e}")
+        log_error(e, user_id=current_user.id if current_user.is_authenticated else None,
+                 additional_info={"event_id": id})
         flash('Error loading event details', 'danger')
         return redirect(url_for('core.events'))
     
@@ -378,42 +350,41 @@ def get_events_by_ids(event_ids):
     if not isinstance(event_ids, list):
         event_ids = [event_ids]
     
-    # Convert all IDs to strings for consistent comparison
-    event_ids = [str(id) for id in event_ids]
+    # First try to find events by event_id
+    events = Event.query.filter(Event.event_id.in_(event_ids)).all()
     
-    # Load all events
-    events_df = load_events_data()
-    
-    # Ensure 'id' column is string type for comparison
-    events_df['id'] = events_df['id'].astype(str)
-    
-    # Filter events by ID
-    filtered_df = events_df[events_df['id'].isin(event_ids)]
-    
-    # If no direct matches, try with just numeric portion of IDs
-    if len(filtered_df) == 0:
-        # Extract numeric parts from event_ids (if they contain non-numeric characters)
+    # If no events found, try to find by database id
+    if not events:
+        # Try to convert string IDs to integers for database lookup
         numeric_ids = []
         for id_str in event_ids:
-            # Try to extract numeric part if it contains non-numeric characters
-            if not id_str.isdigit():
-                import re
-                match = re.search(r'\d+', id_str)
-                if match:
-                    numeric_ids.append(match.group())
-            else:
-                numeric_ids.append(id_str)
+            try:
+                if isinstance(id_str, str):
+                    # Try to extract numeric part if it's a string with non-numeric characters
+                    if not id_str.isdigit():
+                        import re
+                        match = re.search(r'\d+', id_str)
+                        if match:
+                            numeric_ids.append(int(match.group()))
+                    else:
+                        numeric_ids.append(int(id_str))
+                elif isinstance(id_str, int):
+                    numeric_ids.append(id_str)
+            except (ValueError, TypeError):
+                continue
         
-        # Try matching with numeric IDs
-        filtered_df = events_df[events_df['id'].isin(numeric_ids)]
-        
-        # If still no matches, try matching event_ids against each part of the id in events_df
-        if len(filtered_df) == 0:
-            mask = events_df['id'].apply(lambda x: any(id in x for id in event_ids))
-            filtered_df = events_df[mask]
+        # If we have any numeric IDs, try to find events by database ID
+        if numeric_ids:
+            events = Event.query.filter(Event.id.in_(numeric_ids)).all()
     
-    # Convert to event objects
-    return convert_to_event_objects(filtered_df)
+    # If still no events found, try partial matching on event_id
+    if not events:
+        # Use OR conditions for each ID
+        conditions = [Event.event_id.ilike(f"%{id_str}%") for id_str in event_ids if isinstance(id_str, str)]
+        if conditions:
+            events = Event.query.filter(or_(*conditions)).all()
+    
+    return events
 
 @bp.route('/dashboard')
 @login_required
@@ -432,24 +403,20 @@ def dashboard():
         current_app.logger.error(f"Error loading articles for dashboard: {e}")
         personalized_articles = []
     
-    # Get upcoming events from CSV
+    # Get upcoming events from database
     try:
-        events_df = load_events_data()
-        
-        # Filter for upcoming events
-        filtered_df = filter_events(events_df, 'upcoming')
+        # Get upcoming events
+        upcoming_events = get_upcoming_events(5)
         
         # If user has preferred categories, filter events by tags
-        if preferred_categories:
-            # Create a mask for events with matching tags
-            mask = False
-            for category in preferred_categories:
-                mask = mask | filtered_df['tags'].str.contains(category, case=False, na=False)
-            
-            filtered_df = filtered_df[mask]
-        
-        # Convert to event objects
-        upcoming_events = convert_to_event_objects(filtered_df.head(3))
+        if preferred_categories and upcoming_events:
+            filtered_events = []
+            for event in upcoming_events:
+                if event.tags:
+                    # Check if any preferred category is in the event tags
+                    if any(category.lower() in event.tags.lower() for category in preferred_categories):
+                        filtered_events.append(event)
+            upcoming_events = filtered_events[:3]
         
     except Exception as e:
         current_app.logger.error(f"Error loading events for dashboard: {e}")
