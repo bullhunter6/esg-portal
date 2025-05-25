@@ -66,7 +66,7 @@ A Flask web application for managing and viewing ESG (Environmental, Social, and
 
 1.  **Clone the repository:**
     ```bash
-    git clone [<repository-url>](https://github.com/bullhunter6/esg-portal.git)
+    git clone https://github.com/bullhunter6/esg-portal.git
     cd esg-portal
     ```
 
