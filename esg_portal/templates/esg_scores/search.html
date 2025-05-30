@@ -179,11 +179,6 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if tab == 'MSCI' %}active{% endif %}" href="{{ url_for('esg_scores.search', tab='MSCI', company_name=company_name) }}">
-                <i class="fas fa-chart-bar me-1"></i>MSCI
-            </a>
-        </li>
-        <li class="nav-item">
             <a class="nav-link {% if tab == 'ISS' %}active{% endif %}" href="{{ url_for('esg_scores.search', tab='ISS', company_name=company_name) }}">
                 <i class="fas fa-balance-scale me-1"></i>ISS
             </a>
@@ -268,7 +263,7 @@
                             <ul class="list-unstyled">
                                 <li><strong>S&P:</strong> 0-100 (higher is better)</li>
                                 <li><strong>Sustainalytics:</strong> 0-100 (lower is better)</li>
-                                <li><strong>MSCI:</strong> AAA to CCC (AAA is best)</li>
+
                                 <li><strong>ISS:</strong> A+ to D- (A+ is best)</li>
                                 <li><strong>LSEG:</strong> 0-100 (higher is better)</li>
                             </ul>

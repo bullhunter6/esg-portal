@@ -17,7 +17,6 @@ SCORE_EXTRACTORS = {
     "Sustainalytics": "esg_portal.search_tool.score_extractors.sustainalytics",
     "ISS": "esg_portal.search_tool.score_extractors.iss",
     "LSEG": "esg_portal.search_tool.score_extractors.lseg",
-    "MSCI": "esg_portal.search_tool.score_extractors.msci",
     "CDP": "esg_portal.search_tool.score_extractors.cdp"
 }
 
@@ -56,8 +55,6 @@ def fetch_score(source, company_name, year=None):
             score_func = module.iss_score
         elif source == "LSEG":
             score_func = module.lseg_score
-        elif source == "MSCI":
-            score_func = module.msci_score
         else:
             return {"error": f"Unsupported source: {source}"}
         
@@ -111,14 +108,6 @@ def fetch_score(source, company_name, year=None):
                 "Governance Pillar": result.get("TR.GovernancePillar", "-"),
                 "Environment Pillar": result.get("TR.EnvironmentPillar", "-"),
                 "Social Pillar": result.get("TR.SocialPillar", "-"),
-            }
-        elif source == "MSCI":
-            return {
-                "Company Name": result.get("Company Name", "-"),
-                "Ticker": result.get("Ticker", "-"),
-                "Industry": result.get("Industry", "-"),
-                "Country/Region": result.get("Country/Region", "-"),
-                "ESG Rating": result.get("ESG Rating", "-"),
             }
         else:
             return {"error": f"Unknown source: {source}"}
@@ -196,7 +185,7 @@ def fetch_all_scores(company_name, year=None):
         dict: Scores from all sources
     """
     results = {}
-    sources = ["S&P", "Sustainalytics", "ISS", "LSEG", "MSCI"]
+    sources = ["S&P", "Sustainalytics", "ISS", "LSEG"]
     
     # Use concurrent futures to fetch scores in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(sources)) as executor:
@@ -289,7 +278,7 @@ def stream_all_scores(company_name, year=None):
         Response: A Flask Response object with SSE stream
     """
     def generate():
-        sources = ["S&P", "Sustainalytics", "ISS", "LSEG", "MSCI"]
+        sources = ["S&P", "Sustainalytics", "ISS", "LSEG"]
         
         # Use concurrent futures to fetch scores in parallel
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(sources)) as executor:
