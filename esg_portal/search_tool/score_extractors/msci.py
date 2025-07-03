@@ -145,7 +145,7 @@ def msci_score(company_name):
         if details:
             return details
         else:
-            return {"error": "Company details not found in MSCI database."}
+            return {"ESG Rating": "-", "source": "MSCI"}
     else:
-        return {"error": "No company found in MSCI database."}
+        return {"ESG Rating": "-", "source": "MSCI"}
 

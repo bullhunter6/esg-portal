@@ -93,7 +93,7 @@ def snp_score(company_name):
     print(f"Fetching S&P score for: {company_name}")
     company_id = snp_company_id(company_name)
     if company_id is None:
-        return {"error": "Company not found in S&P database", "source": "S&P"}
+        return {"esg_score": "-", "source": "S&P"}
     else:
         if company_id:
             result = snp_company_details(company_id)
@@ -103,4 +103,4 @@ def snp_score(company_name):
                     result["esg_score"] = "-"
                 result["source"] = "S&P"
                 return result
-        return {"error": "Failed to retrieve company details from S&P", "source": "S&P"}
+        return {"esg_score": "-", "source": "S&P"}

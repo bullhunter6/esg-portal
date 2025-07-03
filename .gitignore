@@ -8,7 +8,9 @@ chroma_db_agthia_report/
 chroma_db_company_report/
 chroma_db_esg_policy/
 *.sqlite3
+# DB files - but not instance/esg_portal.db
 *.db
+!instance/esg_portal.db
 *.log
 *.pdf
 *.egg-info/
@@ -28,3 +30,6 @@ fonts/
 # Output reports
 *_ESG_Gap_Analysis_Report_*.pdf
 esg_gap_analysis_report.txt
+
+esg.pem
+

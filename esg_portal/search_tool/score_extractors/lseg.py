@@ -124,6 +124,6 @@ def lseg_score(company_name):
             company_data.update(company_details(ric_code))
             return company_data
         else:
-            return {"error": "No match found for company in LSEG database."}
+            return {"TR.TRESG": "-", "source": "LSEG"}
     else:
-        return {"error": "Failed to fetch company data from LSEG."}
+        return {"TR.TRESG": "-", "source": "LSEG"}
